@@ -52,6 +52,11 @@ class CharacterTest {
         assertThatThrownBy(() -> characterFixture().name(null).create()).isInstanceOf(NullPointerException.class).hasMessage("name cannot be null");
     }
 
+    @Test
+    void allowNullDescription() {
+        assertThat(characterFixture().description(null).create().getDescription()).isNull();
+    }
+
 
     private static CharacterFixture characterFixture() {
         return new CharacterFixture();
