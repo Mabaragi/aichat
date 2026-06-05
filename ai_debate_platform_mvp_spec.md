@@ -249,6 +249,8 @@ MVP에서는 실제 기능 구현을 미뤄도 되지만, 향후 확장을 위�
 | createdAt | LocalDateTime | 생성일 |
 | updatedAt | LocalDateTime | 수정일 |
 
+현재 코드의 `Character` 클래스는 위 목표 필드 중 `personality`를 아직 저장하지 않는다. 생성 팩토리 인자로는 `personality`를 받지만 객체 필드에 반영되지 않으므로, MVP 구현 시 `personality` 저장 필드를 추가하거나 명세에서 제외하는 결정을 해야 한다.
+
 ### personality 예시
 
 ```json
@@ -514,9 +516,25 @@ MVP에서는 JPA `ddl-auto=update`로 시작해도 된다.
 
 ---
 
-## 10. Spring Boot 백엔드 기술 스택
+## 10. 현재 저장소 구현 상태
 
-### 10.1 기본 스택
+이 문서는 MVP 목표 명세와 구현 방향을 함께 기록한다. 현재 저장소는 전체 MVP가 완성된 상태가 아니라, Maven 기반 Spring Boot 프로젝트와 패키지/클래스 스캐폴딩이 먼저 잡힌 상태다.
+
+- 빌드 도구는 Maven이며, 루트에 `pom.xml`, `mvnw`, `mvnw.cmd`가 있다.
+- 기준 패키지는 `com.example.aichat`이다.
+- 설정 파일은 `src/main/resources/application.yaml`이며, SQLite 데이터베이스 `./data/ai-debate.db`를 사용한다.
+- `User`, `DebateSession`, `DebateParticipant`, `DebateTurn`, `SavedScene`, `SharedContent` 클래스는 존재하지만, 대부분 필드와 도메인 로직 구현 전 상태다.
+- `Character`는 일부 도메인 필드와 생성 팩토리가 구현되어 있다. 현재 코드 기준 필드는 `ownerId`, `name`, `description`, `speechStyle`, `visibility`, `createdAt`, `updatedAt` 중심이다.
+- `Character.create(...)`는 `personality` 인자를 받지만 현재 객체 필드로 저장하지 않는다. `personality`는 아래 명세의 목표 필드이며, 구현 시 저장 정책을 맞춰야 한다.
+- 컨트롤러는 `/api/users`, `/api/characters`, `/api/debate-sessions`, `/api/debate-sessions/{sessionId}/turns` 베이스 경로만 선언되어 있고, 실제 HTTP 메서드는 아직 구현 전이다.
+- `MockLlmClient`와 `PromptBuilder`는 존재하지만 스텁 상태다. `MockLlmClient.generate(...)`는 현재 `UnsupportedOperationException`을 던진다.
+- 주요 유스케이스, Request DTO, Response DTO도 이름과 위치는 잡혀 있으나 대부분 스텁 상태다.
+
+---
+
+## 11. Spring Boot 백엔드 기술 스택
+
+### 11.1 기본 스택
 
 - Java 21
 - Spring Boot 4.x
@@ -526,34 +544,68 @@ MVP에서는 JPA `ddl-auto=update`로 시작해도 된다.
 - SQLite
 - Hibernate Community Dialects
 - Lombok
-- Gradle
+- Maven
+- Maven Wrapper
 - IntelliJ IDEA
 
-### 10.2 build.gradle 의존성 예시
+### 11.2 pom.xml 의존성/플러그인 기준
 
-```groovy
-dependencies {
-    implementation 'org.springframework.boot:spring-boot-starter-webmvc'
-    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
-    implementation 'org.springframework.boot:spring-boot-starter-validation'
+현재 루트 `pom.xml`은 Spring Boot parent와 다음 의존성을 기준으로 한다.
 
-    implementation 'org.xerial:sqlite-jdbc:3.49.1.0'
-    implementation 'org.hibernate.orm:hibernate-community-dialects'
-
-    compileOnly 'org.projectlombok:lombok'
-    annotationProcessor 'org.projectlombok:lombok'
-
-    developmentOnly 'org.springframework.boot:spring-boot-devtools'
-
-    testImplementation 'org.springframework.boot:spring-boot-starter-test'
-    testImplementation 'org.springframework.boot:spring-boot-starter-webmvc-test'
-}
+```xml
+<dependencies>
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-webmvc</artifactId>
+    </dependency>
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-data-jpa</artifactId>
+    </dependency>
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-validation</artifactId>
+    </dependency>
+    <dependency>
+        <groupId>org.springdoc</groupId>
+        <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+        <version>3.0.2</version>
+    </dependency>
+    <dependency>
+        <groupId>org.xerial</groupId>
+        <artifactId>sqlite-jdbc</artifactId>
+        <scope>runtime</scope>
+    </dependency>
+    <dependency>
+        <groupId>org.hibernate.orm</groupId>
+        <artifactId>hibernate-community-dialects</artifactId>
+    </dependency>
+    <dependency>
+        <groupId>org.projectlombok</groupId>
+        <artifactId>lombok</artifactId>
+        <optional>true</optional>
+    </dependency>
+</dependencies>
 ```
 
-### 10.3 application.yml 예시
+테스트 의존성은 `spring-boot-starter-data-jpa-test`, `spring-boot-starter-validation-test`, `spring-boot-starter-webmvc-test`를 사용한다.
+
+빌드 플러그인은 `spring-boot-maven-plugin`과 `maven-compiler-plugin`을 사용한다. Lombok annotation processor는 `maven-compiler-plugin`의 `annotationProcessorPaths`로 설정한다.
+
+Windows 기준 실행/검증 명령은 다음과 같다.
+
+```powershell
+.\mvnw.cmd test
+.\mvnw.cmd spring-boot:run
+```
+
+### 11.3 application.yaml 예시
 
 ```yaml
 spring:
+  application:
+    name: aichat
+
   datasource:
     url: jdbc:sqlite:./data/ai-debate.db
     driver-class-name: org.sqlite.JDBC
@@ -573,12 +625,12 @@ server:
 
 ---
 
-## 11. 패키지 구조
+## 12. 패키지 구조
 
 초기에는 모듈러 모놀리스 구조를 사용한다.
 
 ```text
-src/main/java/com/example/aidebate
+src/main/java/com/example/aichat
  ├─ user
  │   ├─ domain
  │   ├─ application
@@ -609,7 +661,7 @@ src/main/java/com/example/aidebate
      └─ time
 ```
 
-### 11.1 각 계층 책임
+### 12.1 각 계층 책임
 
 ```text
 domain
@@ -639,14 +691,14 @@ web
 
 ---
 
-## 12. 주요 유스케이스
+## 13. 주요 유스케이스
 
-### 12.1 User
+### 13.1 User
 
 - CreateUser
 - GetUser
 
-### 12.2 Character
+### 13.2 Character
 
 - CreateCharacter
 - UpdateCharacter
@@ -654,7 +706,7 @@ web
 - ListCharacters
 - DeleteCharacter
 
-### 12.3 DebateSession
+### 13.3 DebateSession
 
 - CreateDebateSession
 - StartDebateSession
@@ -663,12 +715,12 @@ web
 - GetDebateSession
 - ListDebateSessions
 
-### 12.4 DebateTurn
+### 13.4 DebateTurn
 
 - ListDebateTurns
 - RegenerateTurn
 
-### 12.5 Share
+### 13.5 Share
 
 - CreateShareLink
 - GetSharedSession
@@ -676,9 +728,20 @@ web
 
 ---
 
-## 13. API 명세 초안
+## 14. API 명세 초안
 
-## 13.1 User API
+이 섹션은 앞으로 구현할 MVP 목표 API 명세다. 현재 코드에는 컨트롤러 클래스와 베이스 경로만 있으며, 실제 HTTP 메서드, Request DTO 필드, Response DTO 필드는 아직 구현 전이다.
+
+현재 선언된 베이스 경로:
+
+```text
+/api/users
+/api/characters
+/api/debate-sessions
+/api/debate-sessions/{sessionId}/turns
+```
+
+## 14.1 User API
 
 ### 사용자 생성
 
@@ -708,7 +771,7 @@ Response:
 
 ---
 
-## 13.2 Character API
+## 14.2 Character API
 
 ### 캐릭터 생성
 
@@ -777,7 +840,7 @@ DELETE /api/characters/{characterId}
 
 ---
 
-## 13.3 DebateSession API
+## 14.3 DebateSession API
 
 ### 토론 세션 생성
 
@@ -882,7 +945,7 @@ POST /api/debate-sessions/{sessionId}/complete
 
 ---
 
-## 13.4 DebateTurn API
+## 14.4 DebateTurn API
 
 ### 다음 발화 생성
 
@@ -946,7 +1009,7 @@ Response:
 
 ---
 
-## 13.5 Share API
+## 14.5 Share API
 
 ### 공유 링크 생성
 
@@ -975,9 +1038,9 @@ GET /api/shared-contents/{slug}
 
 ---
 
-## 14. 토론 생성 로직
+## 15. 토론 생성 로직
 
-### 14.1 기본 흐름
+### 15.1 기본 흐름
 
 ```text
 1. DebateSession 조회
@@ -993,7 +1056,7 @@ GET /api/shared-contents/{slug}
 11. maxRounds에 도달하면 COMPLETED 처리
 ```
 
-### 14.2 다음 발화자 계산
+### 15.2 다음 발화자 계산
 
 MVP에서는 speakingOrder 기준으로 번갈아 말하게 한다.
 
@@ -1007,7 +1070,7 @@ turnIndex 3 -> A
 turnIndex 4 -> B
 ```
 
-### 14.3 라운드 계산
+### 15.3 라운드 계산
 
 참가자가 2명인 MVP 기준:
 
@@ -1024,7 +1087,7 @@ turnIndex 3 -> round 2
 turnIndex 4 -> round 2
 ```
 
-### 14.4 종료 조건
+### 15.4 종료 조건
 
 ```text
 maxRounds = 5
@@ -1036,9 +1099,9 @@ turnIndex가 10까지 생성되면 세션 완료
 
 ---
 
-## 15. 프롬프트 구성
+## 16. 프롬프트 구성
 
-### 15.1 프롬프트에 포함할 정보
+### 16.1 프롬프트에 포함할 정보
 
 - 토론 주제
 - 토론 설명
@@ -1051,7 +1114,7 @@ turnIndex가 10까지 생성되면 세션 완료
 - 이번 발화 목적
 - 최대 길이
 
-### 15.2 프롬프트 템플릿 초안
+### 16.2 프롬프트 템플릿 초안
 
 ```text
 당신은 AI 토론 플랫폼의 캐릭터입니다.
@@ -1081,7 +1144,7 @@ turnIndex가 10까지 생성되면 세션 완료
 최대 {maxTurnLength}자 이내로 작성하세요.
 ```
 
-### 15.3 promptSnapshot 저장
+### 16.3 promptSnapshot 저장
 
 생성된 모든 `DebateTurn`에는 생성 당시의 프롬프트를 저장한다.
 
@@ -1094,9 +1157,9 @@ turnIndex가 10까지 생성되면 세션 완료
 
 ---
 
-## 16. LLM 연동 전략
+## 17. LLM 연동 전략
 
-### 16.1 MVP 1단계: Mock Generator
+### 17.1 MVP 1단계: Mock Generator
 
 초기에는 실제 LLM API를 붙이지 않는다.
 
@@ -1114,7 +1177,7 @@ Mock Generator는 다음 목적을 가진다.
 {displayName}의 입장에서 '{topicTitle}'에 대해 주장합니다. 입장: {position}
 ```
 
-### 16.2 MVP 2단계: 실제 LLM API 연동
+### 17.2 MVP 2단계: 실제 LLM API 연동
 
 도메인 로직이 안정되면 외부 LLM API를 붙인다.
 
@@ -1148,9 +1211,9 @@ LocalModelLlmClient
 
 ---
 
-## 17. 상태 전이
+## 18. 상태 전이
 
-### 17.1 DebateSession 상태 전이
+### 18.1 DebateSession 상태 전이
 
 ```text
 CREATED
@@ -1179,7 +1242,7 @@ CREATED -> RUNNING -> COMPLETED
 
 나머지는 확장용으로 enum에 둘 수 있지만, 실제 API는 나중에 구현해도 된다.
 
-### 17.2 DebateTurn 상태 전이
+### 18.2 DebateTurn 상태 전이
 
 ```text
 GENERATING -> COMPLETED
@@ -1191,9 +1254,9 @@ MVP에서는 동기 생성이면 바로 `COMPLETED`로 저장해도 된다.
 
 ---
 
-## 18. 도메인 규칙
+## 19. 도메인 규칙
 
-### 18.1 DebateSession 규칙
+### 19.1 DebateSession 규칙
 
 - 토론 세션에는 최소 2명의 참가자가 필요하다.
 - MVP에서는 참가자는 정확히 2명으로 제한한다.
@@ -1204,22 +1267,23 @@ MVP에서는 동기 생성이면 바로 `COMPLETED`로 저장해도 된다.
 - `RUNNING` 상태의 세션만 발화를 생성할 수 있다.
 - 최대 라운드에 도달하면 세션은 `COMPLETED`가 된다.
 
-### 18.2 Character 규칙
+### 19.2 Character 규칙
 
 - 캐릭터 이름은 필수다.
 - 캐릭터 이름은 1자 이상 50자 이하로 제한한다.
 - description은 1000자 이하로 제한한다.
-- personality와 speechStyle은 MVP에서는 JSON 문자열로 저장한다.
+- personality와 speechStyle은 MVP 목표 명세에서는 JSON 문자열로 저장한다.
+- 현재 `Character` 구현은 speechStyle만 저장하므로, personality 저장은 추가 구현이 필요하다.
 - ownerId는 필수다.
 
-### 18.3 DebateParticipant 규칙
+### 19.3 DebateParticipant 규칙
 
 - 하나의 세션에는 같은 speakingOrder를 가진 참가자가 중복될 수 없다.
 - speakingOrder는 1부터 시작한다.
 - MVP에서는 speakingOrder 1, 2만 허용한다.
 - position은 필수다.
 
-### 18.4 DebateTurn 규칙
+### 19.4 DebateTurn 규칙
 
 - turnIndex는 세션 안에서 유일해야 한다.
 - participantId는 해당 세션에 속한 참가자여야 한다.
@@ -1228,9 +1292,9 @@ MVP에서는 동기 생성이면 바로 `COMPLETED`로 저장해도 된다.
 
 ---
 
-## 19. 예외 처리
+## 20. 예외 처리
 
-### 19.1 공통 에러 응답
+### 20.1 공통 에러 응답
 
 ```json
 {
@@ -1240,7 +1304,7 @@ MVP에서는 동기 생성이면 바로 `COMPLETED`로 저장해도 된다.
 }
 ```
 
-### 19.2 주요 에러 코드
+### 20.2 주요 에러 코드
 
 ```text
 USER_NOT_FOUND
@@ -1257,9 +1321,9 @@ SHARED_CONTENT_NOT_FOUND
 
 ---
 
-## 20. 테스트 전략
+## 21. 테스트 전략
 
-### 20.1 우선 작성할 테스트
+### 21.1 우선 작성할 테스트
 
 #### DebateSession 도메인 테스트
 
@@ -1283,7 +1347,7 @@ SHARED_CONTENT_NOT_FOUND
 - ownerId가 없으면 생성할 수 없다.
 - 캐릭터를 생성하면 ownerId와 연결된다.
 
-### 20.2 테스트 우선순위
+### 21.2 테스트 우선순위
 
 ```text
 1. 순수 도메인 테스트
@@ -1294,13 +1358,13 @@ SHARED_CONTENT_NOT_FOUND
 
 ---
 
-## 21. 구현 순서
+## 22. 구현 순서
 
-### 21.1 1차 구현
+### 22.1 1차 구현
 
 ```text
-1. Spring Boot 프로젝트 생성
-2. SQLite 연결
+1. Maven 기반 Spring Boot 프로젝트 구조 확인
+2. SQLite 연결 확인 및 JPA 매핑 구현
 3. User Entity/Repository/API 생성
 4. Character Entity/Repository/API 생성
 5. DebateSession Entity/Repository 생성
@@ -1308,7 +1372,7 @@ SHARED_CONTENT_NOT_FOUND
 7. DebateTurn Entity/Repository 생성
 ```
 
-### 21.2 2차 구현
+### 22.2 2차 구현
 
 ```text
 1. CreateDebateSessionUseCase 구현
@@ -1319,7 +1383,7 @@ SHARED_CONTENT_NOT_FOUND
 6. DebateSession 상세 조회 구현
 ```
 
-### 21.3 3차 구현
+### 22.3 3차 구현
 
 ```text
 1. PromptBuilder 구현
@@ -1329,7 +1393,7 @@ SHARED_CONTENT_NOT_FOUND
 5. 생성 실패 처리
 ```
 
-### 21.4 4차 구현
+### 22.4 4차 구현
 
 ```text
 1. SavedScene 구현
@@ -1340,7 +1404,7 @@ SHARED_CONTENT_NOT_FOUND
 
 ---
 
-## 22. MVP 완료 기준
+## 23. MVP 완료 기준
 
 MVP 완료 기준은 다음과 같다.
 
@@ -1356,7 +1420,7 @@ MVP 완료 기준은 다음과 같다.
 
 ---
 
-## 23. MVP 이후 계획
+## 24. MVP 이후 계획
 
 MVP 이후에는 토론 플랫폼을 더 넓은 AI 캐릭터 엔터테인먼트 플랫폼으로 확장한다.
 

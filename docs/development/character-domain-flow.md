@@ -2,6 +2,8 @@
 
 이 문서는 `src/main/java/com/example/aichat/character` 모듈을 실제 MVP 기능으로 구현할 때 따를 순서를 정리한다. 현재 코드는 스텁 상태이므로, 먼저 도메인 규칙을 고정한 뒤 바깥 계층으로 확장한다.
 
+상세 TDD 절차와 계층별 테스트 작성 순서는 [Character TDD 전체 개발 흐름](./character-tdd-flow.md)을 기준으로 한다. 이 문서는 도메인 규칙과 구현 범위를 빠르게 확인하는 요약 문서로 유지한다.
+
 ## 현재 구조
 
 기준 패키지는 `com.example.aichat.character`다.

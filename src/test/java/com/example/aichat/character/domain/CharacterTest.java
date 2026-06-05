@@ -31,14 +31,25 @@ class CharacterTest {
 
     @Test
     void rejectCharacterWithToolongName() {
-        CharacterFixture fixture = characterFixture().name(
-                "a".repeat(51));
+        CharacterFixture fixture = characterFixture().name("a".repeat(51));
         assertThatThrownBy(fixture::create).isInstanceOf(IllegalArgumentException.class);
     }
+
     @Test
     void rejectCharacterWithToolongDescription() {
         var fixture = characterFixture().description("a".repeat(1001));
         assertThatThrownBy(fixture::create).isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void rejectNullOwnerId() {
+        assertThatThrownBy(() -> characterFixture().ownerId(null).create()).isInstanceOf(NullPointerException.class).hasMessage(
+                "ownerId cannot be null");
+    }
+
+    @Test
+    void rejectNullName() {
+        assertThatThrownBy(() -> characterFixture().name(null).create()).isInstanceOf(NullPointerException.class).hasMessage("name cannot be null");
     }
 
 
@@ -49,6 +60,7 @@ class CharacterTest {
     private static LocalDateTime defaultNow() {
         return LocalDateTime.of(2026, 6, 5, 12, 0);
     }
+
 
     private static class CharacterFixture {
         private Long ownerId = 1L;
@@ -76,8 +88,7 @@ class CharacterTest {
 
 
         Character create() {
-            return Character.create(ownerId, name, description, personality,
-                    speechStyle, createdAt, updatedAt);
+            return Character.create(ownerId, name, description, personality, speechStyle, createdAt, updatedAt);
         }
     }
 }
