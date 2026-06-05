@@ -1,5 +1,8 @@
 HELP.md
 target/
+data/*.db
+data/*.db-*
+*.sqlite
 .mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/
 !**/src/test/**/target/
