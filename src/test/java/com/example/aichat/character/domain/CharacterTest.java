@@ -9,7 +9,6 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class CharacterTest {
 
-
     @Test
     void createCharacterWithRequiredFields() {
         var ownerId = 1L;
@@ -20,13 +19,48 @@ class CharacterTest {
 
         Character character = characterFixture().create();
 
-        assertThat(character.getOwnerId()).isEqualTo(1L);
+        assertThat(character.getOwnerId()).isEqualTo(ownerId);
         assertThat(character.getName()).isEqualTo(name);
         assertThat(character.getDescription()).isEqualTo(description);
+        assertThat(character.getPersonality()).isEqualTo(personality);
         assertThat(character.getSpeechStyle()).isEqualTo(speechStyle);
         assertThat(character.getCreatedAt()).isEqualTo(defaultNow());
         assertThat(character.getUpdatedAt()).isEqualTo(defaultNow());
         assertThat(character.getVisibility()).isEqualTo("PRIVATE");
+    }
+
+    @Test
+    void createCharacterWithCustomVisibility() {
+        Character character = Character.create(
+                1L,
+                "홍길동",
+                "의적",
+                "의연함",
+                "합쇼체",
+                "public",
+                defaultNow(),
+                defaultNow()
+        );
+
+        assertThat(character.getVisibility()).isEqualTo("PUBLIC");
+    }
+
+    @Test
+    void rejectCharacterWithNullOwnerId() {
+        var fixture = characterFixture().ownerId(null);
+
+        assertThatThrownBy(fixture::create)
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("ownerId is required");
+    }
+
+    @Test
+    void rejectCharacterWithBlankName() {
+        var fixture = characterFixture().name("   ");
+
+        assertThatThrownBy(fixture::create)
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("name is required");
     }
 
     @Test
@@ -42,21 +76,34 @@ class CharacterTest {
     }
 
     @Test
-    void rejectNullOwnerId() {
-        assertThatThrownBy(() -> characterFixture().ownerId(null).create()).isInstanceOf(NullPointerException.class).hasMessage(
-                "ownerId cannot be null");
+    void allowCharacterWithNullDescription() {
+        Character character = characterFixture().description(null).create();
+
+        assertThat(character.getDescription()).isNull();
     }
 
     @Test
-    void rejectNullName() {
-        assertThatThrownBy(() -> characterFixture().name(null).create()).isInstanceOf(NullPointerException.class).hasMessage("name cannot be null");
-    }
+    void updateCharacterChangesMutableFields() {
+        Character character = characterFixture().create();
+        var updatedAt = defaultNow().plusHours(1);
 
-    @Test
-    void allowNullDescription() {
-        assertThat(characterFixture().description(null).create().getDescription()).isNull();
-    }
+        character.update(
+                "새 이름",
+                null,
+                "{\"empathy\":80}",
+                "{\"tone\":\"반말\"}",
+                "public",
+                updatedAt
+        );
 
+        assertThat(character.getName()).isEqualTo("새 이름");
+        assertThat(character.getDescription()).isNull();
+        assertThat(character.getPersonality()).isEqualTo("{\"empathy\":80}");
+        assertThat(character.getSpeechStyle()).isEqualTo("{\"tone\":\"반말\"}");
+        assertThat(character.getVisibility()).isEqualTo("PUBLIC");
+        assertThat(character.getCreatedAt()).isEqualTo(defaultNow());
+        assertThat(character.getUpdatedAt()).isEqualTo(updatedAt);
+    }
 
     private static CharacterFixture characterFixture() {
         return new CharacterFixture();
@@ -65,7 +112,6 @@ class CharacterTest {
     private static LocalDateTime defaultNow() {
         return LocalDateTime.of(2026, 6, 5, 12, 0);
     }
-
 
     private static class CharacterFixture {
         private Long ownerId = 1L;
@@ -91,9 +137,9 @@ class CharacterTest {
             return this;
         }
 
-
         Character create() {
-            return Character.create(ownerId, name, description, personality, speechStyle, createdAt, updatedAt);
+            return Character.create(ownerId, name, description, personality,
+                    speechStyle, createdAt, updatedAt);
         }
     }
 }

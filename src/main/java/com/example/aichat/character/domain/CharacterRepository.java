@@ -7,9 +7,9 @@ public interface CharacterRepository {
 
     Character save(Character character);
 
-    Optional<Character> findById(Long id);
+    Optional<Character> findById(Long characterId);
 
-    List<Character> findByOwnerId(Long id);
+    List<Character> findByOwnerId(Long ownerId);
 
-    void delete(Character character);
+    void deleteById(Long characterId);
 }
