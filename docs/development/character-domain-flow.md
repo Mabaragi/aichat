@@ -34,7 +34,7 @@ character
 - `ownerId`는 필수다.
 - `name`은 필수이며 1자 이상 50자 이하여야 한다.
 - `description`은 선택값이며 1000자 이하여야 한다.
-- `personality`와 `speechStyle`은 MVP에서는 JSON 문자열로 저장한다.
+- `personality`와 `speechStyle`은 도메인 내부에서는 값 객체로 다루고, 저장/응답 경계에서는 canonical JSON 문자열로 변환한다.
 - `visibility`는 필수이며 초기 기본값은 `PRIVATE`로 둔다.
 - 생성 시 `createdAt`, `updatedAt`을 기록하고, 수정 시 `updatedAt`만 갱신한다.
 - 캐릭터 삭제는 우선 hard delete로 시작하되, 토론 세션 참조 정책이 정해지면 soft delete 전환 여부를 다시 판단한다.

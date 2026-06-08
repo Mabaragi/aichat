@@ -54,8 +54,8 @@ public class CharacterUpdateCommand implements Runnable {
                 characterId,
                 name,
                 description,
-                CharacterCommandSupport.normalizeJson(objectMapper, personality, "--personality"),
-                CharacterCommandSupport.normalizeJson(objectMapper, speechStyle, "--speech-style"),
+                CharacterCommandSupport.toPersonality(objectMapper, personality),
+                CharacterCommandSupport.toSpeechStyle(objectMapper, speechStyle),
                 visibility
         );
 

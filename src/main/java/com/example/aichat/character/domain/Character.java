@@ -14,14 +14,14 @@ public class Character {
     private final Long ownerId;
     private String name;
     private String description;
-    private String personality;
-    private String speechStyle;
+    private Personality personality;
+    private SpeechStyle speechStyle;
     private String visibility;
     private final LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
     public Character(Long id, Long ownerId, String name, String description,
-                     String personality, String speechStyle, String visibility,
+                     Personality personality, SpeechStyle speechStyle, String visibility,
                      LocalDateTime createdAt, LocalDateTime updatedAt) {
         validateOwnerId(ownerId);
         validateName(name);
@@ -41,24 +41,24 @@ public class Character {
     }
 
     public static Character create(Long ownerId, String name,
-                                   String description, String personality,
-                                   String speechStyle, LocalDateTime createdAt,
+                                   String description, Personality personality,
+                                   SpeechStyle speechStyle, LocalDateTime createdAt,
                                    LocalDateTime updatedAt) {
         return create(ownerId, name, description, personality, speechStyle,
                 DEFAULT_VISIBILITY, createdAt, updatedAt);
     }
 
     public static Character create(Long ownerId, String name,
-                                   String description, String personality,
-                                   String speechStyle, String visibility,
+                                   String description, Personality personality,
+                                   SpeechStyle speechStyle, String visibility,
                                    LocalDateTime createdAt,
                                    LocalDateTime updatedAt) {
         return new Character(null, ownerId, name, description, personality,
                 speechStyle, visibility, createdAt, updatedAt);
     }
 
-    public void update(String name, String description, String personality,
-                       String speechStyle, String visibility,
+    public void update(String name, String description, Personality personality,
+                       SpeechStyle speechStyle, String visibility,
                        LocalDateTime updatedAt) {
         validateName(name);
         validateDescription(description);

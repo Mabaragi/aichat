@@ -4,15 +4,15 @@
 
 이 프로젝트는 AI 캐릭터들이 서로 상호작용하며 콘텐츠를 만들어내는 엔터테인먼트 플랫폼을 목표로 한다.
 
-초기 MVP는 **AI 토론 플랫폼**이다. 사용자가 토론 주제와 두 AI 캐릭터의 성향을 지정하면, AI 캐릭터들이 해당 주제로 토론하고 사용자는 그 과정을 감상한다.
+초기 MVP는 **AI 토론 플랫폼**이다. 사용자가 토론 주제와 두 참가자 모델을 지정하면, AI 참가자들이 해당 주제로 토론하고 사용자는 그 과정을 감상한다.
 
-MVP의 핵심은 단순한 챗봇이 아니라, **여러 AI 캐릭터가 하나의 세션 안에서 역할을 가지고 순서대로 상호작용하는 콘텐츠 생성 구조**를 만드는 것이다.
+MVP의 핵심은 단순한 챗봇이 아니라, **여러 AI 참가자가 하나의 세션 안에서 순서대로 상호작용하는 콘텐츠 생성 구조**를 만드는 것이다.
 
 ---
 
 ## 2. MVP 한 줄 정의
 
-**사용자가 설정한 주제와 캐릭터 성향을 바탕으로, 두 AI 캐릭터가 정해진 규칙에 따라 토론하는 엔터테인먼트 서비스.**
+**사용자가 설정한 주제와 참가자 모델을 바탕으로, 두 AI 참가자가 정해진 규칙에 따라 토론하는 엔터테인먼트 서비스.**
 
 ---
 
@@ -20,9 +20,9 @@ MVP의 핵심은 단순한 챗봇이 아니라, **여러 AI 캐릭터가 하나�
 
 MVP에서 검증할 핵심 가설은 다음과 같다.
 
-1. 사용자는 직접 AI와 대화하지 않아도, AI 캐릭터들끼리 상호작용하는 콘텐츠를 보는 것에서 재미를 느낀다.
-2. 사용자가 주제와 캐릭터 성향을 지정하면, 반복 감상 가능한 토론 콘텐츠가 생성된다.
-3. 캐릭터의 성격, 말투, 입장 차이가 토론의 재미를 만든다.
+1. 사용자는 직접 AI와 대화하지 않아도, AI 참가자들끼리 상호작용하는 콘텐츠를 보는 것에서 재미를 느낀다.
+2. 사용자가 주제와 참가자 모델을 지정하면, 반복 감상 가능한 토론 콘텐츠가 생성된다.
+3. 참가자 모델의 응답 정책 차이가 토론의 재미를 만든다.
 4. 토론 세션 구조는 이후 상황극, 소설, 게임 시뮬레이션으로 확장될 수 있다.
 
 ---
@@ -71,12 +71,12 @@ MVP에서는 다음 기능을 구현하지 않는다.
 
 1. 사용자가 AI 캐릭터를 만든다.
 2. 사용자가 토론 주제를 입력한다.
-3. 사용자가 토론에 참여할 두 캐릭터를 선택한다.
-4. 각 캐릭터의 토론 입장을 설정한다.
+3. 사용자가 토론에 참여할 두 참가자 모델을 선택한다.
+4. 각 참가자 모델의 발화 순서는 요청 배열 순서로 결정된다.
 5. 토론 라운드 수와 형식을 설정한다.
 6. 토론 세션을 생성한다.
 7. 사용자가 토론 시작 버튼을 누른다.
-8. AI 캐릭터들이 순서대로 발화한다.
+8. AI 참가자들이 순서대로 발화한다.
 9. 사용자는 생성된 토론을 읽는다.
 10. 토론이 끝나면 세션이 완료 상태가 된다.
 11. 사용자는 마음에 드는 토론을 저장하거나 공유한다.
@@ -86,15 +86,11 @@ MVP에서는 다음 기능을 구현하지 않는다.
 ```text
 주제: 부먹 vs 찍먹
 
-캐릭터 A:
-- 이름: 합리주의 미식가
-- 성향: 논리적, 차분함, 음식의 조화를 중시
-- 입장: 부먹 찬성
+참가자 A:
+- model: FAST
 
-캐릭터 B:
-- 이름: 자유주의 먹방러
-- 성향: 감각적, 유쾌함, 개인 취향을 중시
-- 입장: 찍먹 찬성
+참가자 B:
+- model: QUALITY
 
 토론 형식:
 - 찬반 토론
@@ -112,7 +108,7 @@ User
  ├─ Character
  └─ DebateSession
      ├─ DebateParticipant
-     │   └─ Character
+     │   └─ ParticipantModel
      └─ DebateTurn
          └─ DebateParticipant
 ```
@@ -164,29 +160,26 @@ MVP의 핵심 Aggregate Root다.
 
 ### 7.4 DebateParticipant
 
-특정 토론 세션 안에서 캐릭터가 맡는 역할이다.
+특정 토론 세션 안에서 발화 생성에 사용할 참가자 모델을 나타낸다.
 
-`Character`와 `DebateSession`을 직접 연결하지 않고, 반드시 `DebateParticipant`를 통해 연결한다.
+현재 MVP 구현 기준으로 `DebateParticipant`는 `Character`와 직접 연결하지 않는다. 참가자는 캐릭터/입장/표시 이름이 아니라 어떤 생성 모델을 사용할지 결정하는 `ParticipantModel`을 가진다.
 
 이유:
 
-- 같은 캐릭터가 세션마다 다른 입장을 가질 수 있다.
-- 같은 캐릭터가 세션마다 다른 이름이나 역할을 가질 수 있다.
-- 이후 상황극, 게임 시뮬레이션으로 확장하기 쉽다.
+- 같은 토론 안에서 서로 다른 생성 모델을 비교할 수 있다.
+- 실제 LLM 연동 전에는 `MOCK` 참가자로 도메인 흐름을 검증할 수 있다.
+- 이후 캐릭터 기반 참가자를 다시 도입하더라도 모델 선택과 캐릭터 설정을 분리할 수 있다.
 
 예시:
 
 ```text
-Character: 냉철한 분석가
-
 Session A:
-- DebateParticipant: AI 규제 찬성 측 논객
+- DebateParticipant: MOCK
+- DebateParticipant: FAST
 
 Session B:
-- DebateParticipant: 부먹 찬성 측 미식가
-
-Session C:
-- GameParticipant: 마피아 게임 시민
+- DebateParticipant: BALANCED
+- DebateParticipant: QUALITY
 ```
 
 ### 7.5 DebateTurn
@@ -322,25 +315,20 @@ public enum DebateFormat {
 
 | 필드 | 타입 | 설명 |
 |---|---|---|
-| id | Long | 참가자 ID |
-| sessionId | Long | 토론 세션 ID |
-| characterId | Long | 캐릭터 ID |
-| displayName | String | 세션 안에서 표시될 이름 |
-| position | String | 토론 입장 |
-| speakingOrder | Integer | 발화 순서 |
-| role | String | 참가자 역할 |
-| createdAt | LocalDateTime | 생성일 |
+| model | ParticipantModel | 참가자가 발화 생성에 사용할 모델 선택 |
 
-### ParticipantRole
+### ParticipantModel
 
 ```java
-public enum ParticipantRole {
-    DEBATER,
-    MODERATOR
+public enum ParticipantModel {
+    MOCK,
+    FAST,
+    BALANCED,
+    QUALITY
 }
 ```
 
-MVP에서는 `DEBATER`만 사용해도 된다.
+MVP 초기에는 `MOCK`으로 도메인 흐름을 검증하고, 실제 LLM 연동 단계에서 `FAST`, `BALANCED`, `QUALITY`를 모델 선택 정책에 연결한다.
 
 ---
 
@@ -459,14 +447,9 @@ CREATE TABLE debate_sessions (
 CREATE TABLE debate_participants (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     session_id INTEGER NOT NULL,
-    character_id INTEGER NOT NULL,
-    display_name TEXT NOT NULL,
-    position TEXT NOT NULL,
-    speaking_order INTEGER NOT NULL,
-    role TEXT NOT NULL,
+    model TEXT NOT NULL,
     created_at TEXT NOT NULL,
-    FOREIGN KEY (session_id) REFERENCES debate_sessions(id),
-    FOREIGN KEY (character_id) REFERENCES characters(id)
+    FOREIGN KEY (session_id) REFERENCES debate_sessions(id)
 );
 
 CREATE TABLE debate_turns (
@@ -863,16 +846,10 @@ Request:
   "maxTurnLength": 600,
   "participants": [
     {
-      "characterId": 1,
-      "displayName": "부먹파 논객",
-      "position": "부먹이 더 낫다",
-      "speakingOrder": 1
+      "model": "FAST"
     },
     {
-      "characterId": 2,
-      "displayName": "찍먹파 논객",
-      "position": "찍먹이 더 낫다",
-      "speakingOrder": 2
+      "model": "QUALITY"
     }
   ]
 }
@@ -892,17 +869,11 @@ Response:
   "participants": [
     {
       "id": 1,
-      "characterId": 1,
-      "displayName": "부먹파 논객",
-      "position": "부먹이 더 낫다",
-      "speakingOrder": 1
+      "model": "FAST"
     },
     {
       "id": 2,
-      "characterId": 2,
-      "displayName": "찍먹파 논객",
-      "position": "찍먹이 더 낫다",
-      "speakingOrder": 2
+      "model": "QUALITY"
     }
   ],
   "createdAt": "2026-06-05T12:00:00"
@@ -987,7 +958,7 @@ Response:
   {
     "id": 1,
     "participantId": 1,
-    "displayName": "부먹파 논객",
+    "participantModel": "FAST",
     "round": 1,
     "turnIndex": 1,
     "type": "ARGUMENT",
@@ -997,7 +968,7 @@ Response:
   {
     "id": 2,
     "participantId": 2,
-    "displayName": "찍먹파 논객",
+    "participantModel": "QUALITY",
     "round": 1,
     "turnIndex": 2,
     "type": "REBUTTAL",
@@ -1058,11 +1029,11 @@ GET /api/shared-contents/{slug}
 
 ### 15.2 다음 발화자 계산
 
-MVP에서는 speakingOrder 기준으로 번갈아 말하게 한다.
+MVP에서는 세션의 `participants` 배열 순서 기준으로 번갈아 말하게 한다.
 
 ```text
-참가자 A speakingOrder = 1
-참가자 B speakingOrder = 2
+참가자 A participants[0] model = FAST
+참가자 B participants[1] model = QUALITY
 
 turnIndex 1 -> A
 turnIndex 2 -> B
@@ -1106,10 +1077,7 @@ turnIndex가 10까지 생성되면 세션 완료
 - 토론 주제
 - 토론 설명
 - 토론 형식
-- 캐릭터 이름
-- 캐릭터 성격
-- 캐릭터 말투
-- 캐릭터 입장
+- 참가자 모델
 - 이전 발화 목록
 - 이번 발화 목적
 - 최대 길이
@@ -1128,17 +1096,14 @@ turnIndex가 10까지 생성되면 세션 완료
 [토론 형식]
 {format}
 
-[당신의 캐릭터]
-이름: {displayName}
-성격: {personality}
-말투: {speechStyle}
-입장: {position}
+[당신의 참가자 모델]
+모델: {participantModel}
 
 [이전 발화]
 {previousTurns}
 
 [지시]
-위 정보를 바탕으로 캐릭터의 성격과 입장을 유지하면서 다음 발화를 작성하세요.
+위 정보를 바탕으로 참가자 모델의 응답 정책에 맞게 다음 발화를 작성하세요.
 상대의 이전 발화를 참고하되, 단순 반복하지 마세요.
 토론 주제에서 벗어나지 마세요.
 최대 {maxTurnLength}자 이내로 작성하세요.
@@ -1174,7 +1139,7 @@ Mock Generator는 다음 목적을 가진다.
 예시 응답:
 
 ```text
-{displayName}의 입장에서 '{topicTitle}'에 대해 주장합니다. 입장: {position}
+{participantModel} 참가자가 '{topicTitle}'에 대해 다음 주장을 생성합니다.
 ```
 
 ### 17.2 MVP 2단계: 실제 LLM API 연동
@@ -1260,7 +1225,6 @@ MVP에서는 동기 생성이면 바로 `COMPLETED`로 저장해도 된다.
 
 - 토론 세션에는 최소 2명의 참가자가 필요하다.
 - MVP에서는 참가자는 정확히 2명으로 제한한다.
-- 세션 생성자는 참가자로 사용할 캐릭터의 소유자여야 한다.
 - `maxRounds`는 1 이상 10 이하로 제한한다.
 - `maxTurnLength`는 100 이상 2000 이하로 제한한다.
 - `CREATED` 상태의 세션만 시작할 수 있다.
@@ -1278,10 +1242,9 @@ MVP에서는 동기 생성이면 바로 `COMPLETED`로 저장해도 된다.
 
 ### 19.3 DebateParticipant 규칙
 
-- 하나의 세션에는 같은 speakingOrder를 가진 참가자가 중복될 수 없다.
-- speakingOrder는 1부터 시작한다.
-- MVP에서는 speakingOrder 1, 2만 허용한다.
-- position은 필수다.
+- model은 필수다.
+- model은 `MOCK`, `FAST`, `BALANCED`, `QUALITY` 중 하나여야 한다.
+- MVP에서는 세션 생성 요청의 `participants` 배열 순서가 발화 순서를 결정한다.
 
 ### 19.4 DebateTurn 규칙
 
@@ -1334,9 +1297,9 @@ SHARED_CONTENT_NOT_FOUND
 
 #### DebateTurn 생성 유스케이스 테스트
 
-- 첫 번째 발화자는 speakingOrder 1 참가자다.
-- 두 번째 발화자는 speakingOrder 2 참가자다.
-- 세 번째 발화자는 다시 speakingOrder 1 참가자다.
+- 첫 번째 발화자는 `participants[0]` 참가자다.
+- 두 번째 발화자는 `participants[1]` 참가자다.
+- 세 번째 발화자는 다시 `participants[0]` 참가자다.
 - turnIndex가 올바르게 증가한다.
 - round가 올바르게 계산된다.
 - 최대 턴 수에 도달하면 세션이 완료된다.
@@ -1408,7 +1371,7 @@ SHARED_CONTENT_NOT_FOUND
 
 MVP 완료 기준은 다음과 같다.
 
-- 사용자가 캐릭터 2개를 만들 수 있다.
+- 사용자가 캐릭터를 만들 수 있다.
 - 사용자가 주제와 참가자를 지정해 토론 세션을 만들 수 있다.
 - 토론 세션을 시작할 수 있다.
 - AI 또는 mock generator가 순서대로 발화를 생성할 수 있다.

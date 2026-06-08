@@ -29,6 +29,7 @@ import java.time.LocalDateTime;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 class CliCommandTest {
@@ -85,6 +86,34 @@ class CliCommandTest {
 
         assertThat(exitCode).isNotZero();
         assertThat(text(err)).contains("Missing required option");
+    }
+
+    @Test
+    void invalidJsonFailsBeforeUseCaseInvocation() {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        ByteArrayOutputStream err = new ByteArrayOutputStream();
+        installStreams(out, err);
+
+        CreateCharacterUseCase createCharacterUseCase = mock(CreateCharacterUseCase.class);
+
+        CommandLine root = commandLine(
+                new RootCommand(),
+                new CharacterCommand(),
+                new CharacterCreateCommand(createCharacterUseCase, new ObjectMapper()),
+                new CharacterGetCommand(mock(GetCharacterUseCase.class), new ObjectMapper()),
+                new CharacterListCommand(mock(ListCharactersUseCase.class), new ObjectMapper()),
+                new CharacterUpdateCommand(mock(UpdateCharacterUseCase.class), new ObjectMapper()),
+                new CharacterDeleteCommand(mock(DeleteCharacterUseCase.class), new ObjectMapper())
+        );
+
+        int exitCode = root.execute("--output", "TEXT", "character", "create",
+                "--owner-id", "1",
+                "--name", "합리주의 미식가",
+                "--personality", "{invalid-json}");
+
+        assertThat(exitCode).isEqualTo(2);
+        assertThat(text(err)).contains("INVALID_ARGUMENT");
+        verifyNoInteractions(createCharacterUseCase);
     }
 
     @Test

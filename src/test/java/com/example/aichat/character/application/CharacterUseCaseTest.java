@@ -1,5 +1,7 @@
 package com.example.aichat.character.application;
 
+import com.example.aichat.character.domain.Personality;
+import com.example.aichat.character.domain.SpeechStyle;
 import com.example.aichat.character.infrastructure.InMemoryCharacterRepository;
 import com.example.aichat.common.time.TimeProvider;
 import org.junit.jupiter.api.BeforeEach;
@@ -37,13 +39,15 @@ class CharacterUseCaseTest {
                 1L,
                 "합리주의 미식가",
                 "논리적이고 차분하게 음식 취향을 분석하는 캐릭터",
-                "{\"rationality\":90}",
-                "{\"tone\":\"차분함\"}",
+                Personality.of("{\"rationality\":90}"),
+                SpeechStyle.of("{\"tone\":\"차분함\"}"),
                 null
         ));
 
         assertThat(created.id()).isEqualTo(1L);
         assertThat(created.visibility()).isEqualTo("PRIVATE");
+        assertThat(created.personality()).isEqualTo("{\"rationality\":90}");
+        assertThat(created.speechStyle()).isEqualTo("{\"tone\":\"차분함\"}");
 
         CharacterView fetched = getCharacterUseCase.execute(created.id());
         assertThat(fetched.name()).isEqualTo("합리주의 미식가");
@@ -55,13 +59,15 @@ class CharacterUseCaseTest {
                 created.id(),
                 "새 이름",
                 null,
-                "{\"rationality\":95}",
+                Personality.of("{\"rationality\":95}"),
                 null,
                 "PUBLIC"
         ));
 
         assertThat(updated.name()).isEqualTo("새 이름");
         assertThat(updated.visibility()).isEqualTo("PUBLIC");
+        assertThat(updated.personality()).isEqualTo("{\"rationality\":95}");
+        assertThat(updated.speechStyle()).isEqualTo("{\"tone\":\"차분함\"}");
 
         DeleteCharacterResult deleted = deleteCharacterUseCase.execute(created.id());
         assertThat(deleted.characterId()).isEqualTo(created.id());

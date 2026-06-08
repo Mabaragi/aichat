@@ -14,8 +14,8 @@ class CharacterTest {
         var ownerId = 1L;
         var name = "홍길동";
         var description = "의적";
-        var personality = "의연함";
-        var speechStyle = "합쇼체";
+        var personality = defaultPersonality();
+        var speechStyle = defaultSpeechStyle();
 
         Character character = characterFixture().create();
 
@@ -35,8 +35,8 @@ class CharacterTest {
                 1L,
                 "홍길동",
                 "의적",
-                "의연함",
-                "합쇼체",
+                Personality.of("{\"rationality\":90}"),
+                SpeechStyle.of("{\"tone\":\"차분함\"}"),
                 "public",
                 defaultNow(),
                 defaultNow()
@@ -83,6 +83,17 @@ class CharacterTest {
     }
 
     @Test
+    void allowCharacterWithNullPersonalityAndSpeechStyle() {
+        Character character = characterFixture()
+                .personality(null)
+                .speechStyle(null)
+                .create();
+
+        assertThat(character.getPersonality()).isNull();
+        assertThat(character.getSpeechStyle()).isNull();
+    }
+
+    @Test
     void updateCharacterChangesMutableFields() {
         Character character = characterFixture().create();
         var updatedAt = defaultNow().plusHours(1);
@@ -90,19 +101,27 @@ class CharacterTest {
         character.update(
                 "새 이름",
                 null,
-                "{\"empathy\":80}",
-                "{\"tone\":\"반말\"}",
+                Personality.of("{\"empathy\":80}"),
+                SpeechStyle.of("{\"tone\":\"반말\"}"),
                 "public",
                 updatedAt
         );
 
         assertThat(character.getName()).isEqualTo("새 이름");
         assertThat(character.getDescription()).isNull();
-        assertThat(character.getPersonality()).isEqualTo("{\"empathy\":80}");
-        assertThat(character.getSpeechStyle()).isEqualTo("{\"tone\":\"반말\"}");
+        assertThat(character.getPersonality()).isEqualTo(Personality.of("{\"empathy\":80}"));
+        assertThat(character.getSpeechStyle()).isEqualTo(SpeechStyle.of("{\"tone\":\"반말\"}"));
         assertThat(character.getVisibility()).isEqualTo("PUBLIC");
         assertThat(character.getCreatedAt()).isEqualTo(defaultNow());
         assertThat(character.getUpdatedAt()).isEqualTo(updatedAt);
+    }
+
+    private static Personality defaultPersonality() {
+        return Personality.of("{\"rationality\":90}");
+    }
+
+    private static SpeechStyle defaultSpeechStyle() {
+        return SpeechStyle.of("{\"tone\":\"차분함\"}");
     }
 
     private static CharacterFixture characterFixture() {
@@ -117,8 +136,8 @@ class CharacterTest {
         private Long ownerId = 1L;
         private String name = "홍길동";
         private String description = "의적";
-        private String personality = "의연함";
-        private String speechStyle = "합쇼체";
+        private Personality personality = defaultPersonality();
+        private SpeechStyle speechStyle = defaultSpeechStyle();
         private LocalDateTime createdAt = defaultNow();
         private LocalDateTime updatedAt = defaultNow();
 
@@ -140,6 +159,16 @@ class CharacterTest {
         Character create() {
             return Character.create(ownerId, name, description, personality,
                     speechStyle, createdAt, updatedAt);
+        }
+
+        CharacterFixture personality(Personality personality) {
+            this.personality = personality;
+            return this;
+        }
+
+        CharacterFixture speechStyle(SpeechStyle speechStyle) {
+            this.speechStyle = speechStyle;
+            return this;
         }
     }
 }
