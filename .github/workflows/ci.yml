@@ -1,0 +1,51 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - "**"
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-validate:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.15.5
+
+      - name: Run Maven tests
+        run: ./mvnw -ntp test
+
+      - name: Build Docker image
+        run: docker build --pull -t aichat:ci .
+
+      - name: Terraform fmt
+        run: terraform fmt -check -recursive infra
+
+      - name: Validate bootstrap Terraform
+        working-directory: infra/bootstrap
+        run: |
+          terraform init -backend=false -input=false
+          terraform validate
+
+      - name: Validate app Terraform
+        working-directory: infra/app
+        run: |
+          terraform init -backend=false -input=false
+          terraform validate

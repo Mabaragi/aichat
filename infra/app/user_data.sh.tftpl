@@ -1,0 +1,56 @@
+#!/usr/bin/env bash
+set -euxo pipefail
+
+APP_HOME="/home/${host_user}/aichat"
+DATA_DIR="${mount_path}"
+VOLUME_ID="${volume_id}"
+HOST_USER="${host_user}"
+
+apt-get update
+DEBIAN_FRONTEND=noninteractive apt-get install -y curl unzip docker.io xfsprogs nvme-cli
+
+curl -fsSL https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip -o /tmp/awscliv2.zip
+rm -rf /tmp/aws
+unzip -q /tmp/awscliv2.zip -d /tmp
+/tmp/aws/install --update
+rm -rf /tmp/aws /tmp/awscliv2.zip
+
+systemctl enable --now docker
+systemctl enable --now snap.amazon-ssm-agent.amazon-ssm-agent.service || systemctl enable --now amazon-ssm-agent || true
+usermod -aG docker "${host_user}" || true
+
+if [ ! -f /swapfile ]; then
+  fallocate -l 2G /swapfile || dd if=/dev/zero of=/swapfile bs=1M count=2048
+  chmod 600 /swapfile
+  mkswap /swapfile
+  swapon /swapfile
+  grep -q '^/swapfile ' /etc/fstab || echo '/swapfile none swap sw 0 0' >> /etc/fstab
+fi
+
+mkdir -p "$${APP_HOME}" "$${DATA_DIR}"
+chown -R "${host_user}:${host_user}" "$${APP_HOME}"
+
+DEVICE=""
+for _ in $(seq 1 60); do
+  DEVICE="$(lsblk -dn -o NAME,SERIAL,TYPE | awk -v vol="$${VOLUME_ID}" '$2 == vol && $3 == "disk" { print "/dev/" $1; exit }')"
+  if [ -n "$${DEVICE}" ]; then
+    break
+  fi
+  sleep 5
+done
+
+if [ -z "$${DEVICE}" ]; then
+  echo "Unable to find attached device for volume $${VOLUME_ID}" >&2
+  exit 1
+fi
+
+if ! blkid "$${DEVICE}" >/dev/null 2>&1; then
+  mkfs.ext4 -F "$${DEVICE}"
+fi
+
+UUID="$(blkid -s UUID -o value "$${DEVICE}")"
+grep -q "UUID=$${UUID} $${DATA_DIR} " /etc/fstab || echo "UUID=$${UUID} $${DATA_DIR} ext4 defaults,nofail 0 2" >> /etc/fstab
+mountpoint -q "$${DATA_DIR}" || mount "$${DATA_DIR}"
+
+chown -R "${host_user}:${host_user}" "$${DATA_DIR}"
+chmod 775 "$${DATA_DIR}"

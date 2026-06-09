@@ -6,6 +6,7 @@
 
 - [Character TDD 전체 개발 흐름](./character-tdd-flow.md): 실제 구현자가 먼저 읽을 문서. `character` 모듈을 domain부터 web까지 TDD로 완성하는 단계별 기준.
 - [Character 도메인 개발 흐름](./character-domain-flow.md): `character` 모듈을 스텁 상태에서 MVP 구현으로 확장할 때 따를 순서와 완료 기준.
+- [GitHub Actions + Terraform 배포 가이드](./aws-cicd.md): `infra/bootstrap` 한 번 적용 이후 `infra/app`과 GitHub Actions로 `EC2 + SSM + ECR` 배포를 운영하는 절차.
 
 ## 작성 기준
 

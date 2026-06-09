@@ -1,0 +1,238 @@
+name: Release
+
+on:
+  workflow_run:
+    workflows:
+      - CI
+    types:
+      - completed
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      sha:
+        description: Commit SHA to deploy
+        required: false
+        type: string
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: aichat-release
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+
+    env:
+      AWS_REGION: ${{ vars.AWS_REGION || 'ap-northeast-2' }}
+      TARGET_SHA: ${{ inputs.sha || github.event.workflow_run.head_sha || github.sha }}
+      APP_PORT: "8080"
+      REPOSITORY_NAME: "aichat"
+
+    steps:
+      - name: Checkout deployed commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.sha || github.event.workflow_run.head_sha || github.sha }}
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.15.5
+
+      - name: Assume Terraform role
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ env.AWS_REGION }}
+          role-to-assume: ${{ vars.AWS_TERRAFORM_ROLE_ARN }}
+          role-session-name: aichat-terraform-${{ github.run_id }}
+
+      - name: Show tool versions
+        run: |
+          aws --version
+          docker version
+          terraform version
+
+      - name: Prepare Terraform backend config
+        run: |
+          ACCOUNT_ID="$(aws sts get-caller-identity --query Account --output text)"
+          STATE_BUCKET="aichat-tfstate-${ACCOUNT_ID}-${AWS_REGION}"
+          LOCK_TABLE="aichat-tflock-${ACCOUNT_ID}-${AWS_REGION}"
+          BACKEND_CONFIG="${RUNNER_TEMP}/aichat-backend.hcl"
+
+          cat >"${BACKEND_CONFIG}" <<EOF
+bucket = "${STATE_BUCKET}"
+key = "app/terraform.tfstate"
+region = "${AWS_REGION}"
+dynamodb_table = "${LOCK_TABLE}"
+encrypt = true
+EOF
+
+          echo "ACCOUNT_ID=${ACCOUNT_ID}" >> "$GITHUB_ENV"
+          echo "STATE_BUCKET=${STATE_BUCKET}" >> "$GITHUB_ENV"
+          echo "LOCK_TABLE=${LOCK_TABLE}" >> "$GITHUB_ENV"
+          echo "BACKEND_CONFIG=${BACKEND_CONFIG}" >> "$GITHUB_ENV"
+
+      - name: Apply app infrastructure
+        run: |
+          terraform -chdir=infra/app init -input=false -reconfigure -backend-config="${BACKEND_CONFIG}"
+          terraform -chdir=infra/app apply -auto-approve -input=false -var "aws_region=${AWS_REGION}"
+
+      - name: Capture deployment outputs
+        run: |
+          echo "ECR_REPOSITORY_URL=$(terraform -chdir=infra/app output -raw ecr_repository_url)" >> "$GITHUB_ENV"
+          echo "EC2_INSTANCE_ID=$(terraform -chdir=infra/app output -raw ec2_instance_id)" >> "$GITHUB_ENV"
+          echo "EC2_PUBLIC_IP=$(terraform -chdir=infra/app output -raw ec2_public_ip)" >> "$GITHUB_ENV"
+
+      - name: Assume deploy role
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ env.AWS_REGION }}
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          role-session-name: aichat-deploy-${{ github.run_id }}
+
+      - name: Build and push image
+        run: |
+          IMAGE_URI="${ECR_REPOSITORY_URL}:${TARGET_SHA}"
+          ECR_REGISTRY="${ECR_REPOSITORY_URL%%/*}"
+
+          echo "IMAGE_URI=${IMAGE_URI}" >> "$GITHUB_ENV"
+          echo "ECR_REGISTRY=${ECR_REGISTRY}" >> "$GITHUB_ENV"
+
+          if aws ecr describe-images --repository-name "${REPOSITORY_NAME}" --image-ids imageTag="${TARGET_SHA}" >/dev/null 2>&1; then
+            echo "Image tag ${TARGET_SHA} already exists in ECR; skipping build and push."
+          else
+            aws ecr get-login-password --region "${AWS_REGION}" | docker login --username AWS --password-stdin "${ECR_REGISTRY}"
+            docker build -t "${IMAGE_URI}" .
+            docker push "${IMAGE_URI}"
+          fi
+
+      - name: Send SSM deploy command
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          aws_region = os.environ["AWS_REGION"]
+          image_uri = os.environ["IMAGE_URI"]
+          ecr_registry = os.environ["ECR_REGISTRY"]
+          app_port = os.environ["APP_PORT"]
+          mount_path = "/home/ubuntu/aichat/data"
+          output_path = Path("ssm-parameters.json")
+
+          script = "\n".join([
+              "cat >/tmp/aichat-deploy.sh <<'EOF'",
+              "#!/usr/bin/env bash",
+              "set -euo pipefail",
+              "",
+              "AWS_REGION='__AWS_REGION__'",
+              "ECR_REGISTRY='__ECR_REGISTRY__'",
+              "IMAGE_URI='__IMAGE_URI__'",
+              "APP_PORT='__APP_PORT__'",
+              "CONTAINER_NAME='aichat'",
+              "MOUNT_PATH='__MOUNT_PATH__'",
+              "",
+              "aws --version",
+              "docker version",
+              "aws ecr get-login-password --region \"$AWS_REGION\" | docker login --username AWS --password-stdin \"$ECR_REGISTRY\"",
+              "docker rm -f \"$CONTAINER_NAME\" 2>/dev/null || true",
+              "docker pull \"$IMAGE_URI\"",
+              "docker run -d \\",
+              "  --name \"$CONTAINER_NAME\" \\",
+              "  --restart unless-stopped \\",
+              "  -p \"${APP_PORT}:8080\" \\",
+              "  -v \"${MOUNT_PATH}:/app/data\" \\",
+              "  -e JAVA_TOOL_OPTIONS=\"-Xms128m -Xmx512m -Duser.timezone=UTC\" \\",
+              "  \"$IMAGE_URI\"",
+              "",
+              "ready=0",
+              "attempt=1",
+              "while [ \"$attempt\" -le 6 ]; do",
+              "  if curl -sS -o /dev/null --max-time 10 \"http://127.0.0.1:${APP_PORT}/\"; then",
+              "    ready=1",
+              "    break",
+              "  fi",
+              "  echo \"Waiting for application readiness (attempt ${attempt})\"",
+              "  attempt=$((attempt + 1))",
+              "  sleep 5",
+              "done",
+              "",
+              "if [ \"$ready\" -ne 1 ]; then",
+              "  docker logs --tail 200 \"$CONTAINER_NAME\" || true",
+              "  exit 1",
+              "fi",
+              "",
+              "curl -sS -D - -o /dev/null -w 'HTTP_STATUS=%{http_code}\\n' --max-time 10 \"http://127.0.0.1:${APP_PORT}/\" || true",
+              "docker ps --filter \"name=$CONTAINER_NAME\"",
+              "EOF",
+              "bash /tmp/aichat-deploy.sh",
+          ])
+
+          script = (
+              script
+              .replace("__AWS_REGION__", aws_region)
+              .replace("__ECR_REGISTRY__", ecr_registry)
+              .replace("__IMAGE_URI__", image_uri)
+              .replace("__APP_PORT__", app_port)
+              .replace("__MOUNT_PATH__", mount_path)
+          )
+
+          output_path.write_text(json.dumps({"commands": [script]}, indent=2), encoding="utf-8")
+          PY
+
+          COMMAND_ID="$(aws ssm send-command \
+            --instance-ids "${EC2_INSTANCE_ID}" \
+            --document-name "AWS-RunShellScript" \
+            --parameters file://ssm-parameters.json \
+            --query "Command.CommandId" \
+            --output text)"
+
+          echo "COMMAND_ID=${COMMAND_ID}" >> "$GITHUB_ENV"
+          echo "SSM command id: ${COMMAND_ID}"
+
+      - name: Wait for SSM completion
+        run: |
+          set +e
+          aws ssm wait command-executed \
+            --command-id "${COMMAND_ID}" \
+            --instance-id "${EC2_INSTANCE_ID}"
+          WAIT_STATUS=$?
+          set -e
+
+          aws ssm get-command-invocation \
+            --command-id "${COMMAND_ID}" \
+            --instance-id "${EC2_INSTANCE_ID}" \
+            --query '{Status:Status,StandardOutputContent:StandardOutputContent,StandardErrorContent:StandardErrorContent}' \
+            --output text
+
+          exit "${WAIT_STATUS}"
+
+      - name: Verify public HTTP endpoint
+        run: |
+          for attempt in 1 2 3 4 5; do
+            set +e
+            HTTP_STATUS="$(curl -sS -o /dev/null -w '%{http_code}' --max-time 10 "http://${EC2_PUBLIC_IP}:${APP_PORT}/")"
+            CURL_STATUS=$?
+            set -e
+
+            echo "HTTP status: ${HTTP_STATUS} (curl exit ${CURL_STATUS})"
+
+            if [ "${CURL_STATUS}" -eq 0 ]; then
+              case "${HTTP_STATUS}" in
+                200|301|302|401|403|404)
+                  exit 0
+                  ;;
+              esac
+            fi
+
+            sleep 5
+          done
+
+          echo "Public endpoint did not return an expected HTTP status" >&2
+          exit 1

@@ -1,0 +1,16 @@
+.git
+.github
+.idea
+.vscode
+target/
+data/*.db
+data/*.db-*
+*.sqlite
+*.log
+docs/
+infra/
+.mvn/
+mvnw
+mvnw.cmd
+HELP.md
+AGENTS.md
