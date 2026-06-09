@@ -25,11 +25,6 @@ variable "state_bucket_prefix" {
   default = "aichat-tfstate"
 }
 
-variable "state_lock_prefix" {
-  type    = string
-  default = "aichat-tflock"
-}
-
 variable "terraform_role_name" {
   type    = string
   default = "aichat-gha-terraform"

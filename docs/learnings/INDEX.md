@@ -1,6 +1,6 @@
 # Learnings Index
 
-아직 작성된 학습 노트는 없다. 새 노트를 추가하면 아래 형식으로 링크와 한 줄 요약을 남긴다.
+- `topics/java-records-value-objects.md`: Java `record`를 DTO, command, view, value object에 쓰는 이유와 `of` factory의 의미를 정리한다.
 
 ```md
 - `notes/YYYY-MM-DD-short-title.md`: <무엇을 배웠는지 한 줄 요약>.

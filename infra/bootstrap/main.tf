@@ -3,7 +3,6 @@ data "aws_caller_identity" "current" {}
 locals {
   account_id        = data.aws_caller_identity.current.account_id
   state_bucket_name = "${var.state_bucket_prefix}-${local.account_id}-${var.aws_region}"
-  lock_table_name   = "${var.state_lock_prefix}-${local.account_id}-${var.aws_region}"
   github_subject    = "repo:${var.github_repository}:ref:refs/heads/${var.github_branch}"
   oidc_provider_arn = var.github_oidc_provider_arn != null ? data.aws_iam_openid_connect_provider.github[0].arn : aws_iam_openid_connect_provider.github[0].arn
 }
@@ -72,17 +71,6 @@ resource "aws_s3_bucket_public_access_block" "state" {
   restrict_public_buckets = true
 }
 
-resource "aws_dynamodb_table" "lock" {
-  name         = local.lock_table_name
-  billing_mode = "PAY_PER_REQUEST"
-  hash_key     = "LockID"
-
-  attribute {
-    name = "LockID"
-    type = "S"
-  }
-}
-
 resource "aws_iam_role" "terraform" {
   name               = var.terraform_role_name
   assume_role_policy = data.aws_iam_policy_document.github_trust.json
@@ -108,19 +96,6 @@ data "aws_iam_policy_document" "terraform_permissions" {
       aws_s3_bucket.state.arn,
       "${aws_s3_bucket.state.arn}/*"
     ]
-  }
-
-  statement {
-    sid    = "StateLockAccess"
-    effect = "Allow"
-    actions = [
-      "dynamodb:DescribeTable",
-      "dynamodb:GetItem",
-      "dynamodb:PutItem",
-      "dynamodb:DeleteItem",
-      "dynamodb:UpdateItem"
-    ]
-    resources = [aws_dynamodb_table.lock.arn]
   }
 
   statement {

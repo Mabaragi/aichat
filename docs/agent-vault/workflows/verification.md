@@ -14,7 +14,7 @@
 
 - Controller 또는 request/response DTO를 바꿨다면 관련 API 흐름과 HTTP status를 확인한다.
 - Persistence 설정, repository, entity mapping을 바꿨다면 JPA/SQLite 저장과 조회 경로를 확인한다.
-- LLM generation 흐름을 바꿨다면 `PromptBuilder`, `LlmClient`, 관련 debate turn 생성 테스트를 확인한다.
+- 텍스트 생성 흐름을 바꿨다면 `DebateTurnPromptBuilder`, `TextGenerator`, provider adapter, 관련 debate turn 생성 테스트를 확인한다.
 - `pom.xml`, `application.yaml`, Maven wrapper 관련 파일을 바꿨다면 compile 또는 test로 설정 오류를 확인한다.
 
 ## Docs-Only Changes

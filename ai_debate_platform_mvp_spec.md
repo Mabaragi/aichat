@@ -510,7 +510,7 @@ MVP에서는 JPA `ddl-auto=update`로 시작해도 된다.
 - `Character`는 일부 도메인 필드와 생성 팩토리가 구현되어 있다. 현재 코드 기준 필드는 `ownerId`, `name`, `description`, `speechStyle`, `visibility`, `createdAt`, `updatedAt` 중심이다.
 - `Character.create(...)`는 `personality` 인자를 받지만 현재 객체 필드로 저장하지 않는다. `personality`는 아래 명세의 목표 필드이며, 구현 시 저장 정책을 맞춰야 한다.
 - 컨트롤러는 `/api/users`, `/api/characters`, `/api/debate-sessions`, `/api/debate-sessions/{sessionId}/turns` 베이스 경로만 선언되어 있고, 실제 HTTP 메서드는 아직 구현 전이다.
-- `MockLlmClient`와 `PromptBuilder`는 존재하지만 스텁 상태다. `MockLlmClient.generate(...)`는 현재 `UnsupportedOperationException`을 던진다.
+- 토론 프롬프트 정책은 `debate.domain.DebateTurnPromptBuilder`가 담당한다. 공용 생성 계약은 `generation.application`의 `TextGenerator`, `GenerationRequest`, `GenerationResult`로 구성되고, `generation.infrastructure.MockTextGenerator`가 deterministic mock 응답을 제공한다.
 - 주요 유스케이스, Request DTO, Response DTO도 이름과 위치는 잡혀 있으나 대부분 스텁 상태다.
 
 ---
@@ -633,10 +633,8 @@ src/main/java/com/example/aichat
  │   └─ web
  │
  ├─ generation
- │   ├─ domain
  │   ├─ application
- │   ├─ infrastructure
- │   └─ web
+ │   └─ infrastructure
  │
  └─ common
      ├─ domain
@@ -1153,26 +1151,28 @@ DebateTurnGenerationUseCase
  ├─ DebateSessionRepository
  ├─ DebateParticipantRepository
  ├─ DebateTurnRepository
- ├─ PromptBuilder
- └─ LlmClient
+ ├─ DebateTurnPromptBuilder
+ └─ TextGenerator
 ```
 
-`LlmClient`는 인터페이스로 둔다.
+`TextGenerator`는 여러 비즈니스 도메인이 재사용할 수 있는 provider-neutral 인터페이스로 둔다. `generation`은 `debate` 타입을 참조하지 않는다.
 
 ```java
-public interface LlmClient {
-    LlmGenerateResult generate(LlmGenerateCommand command);
+public interface TextGenerator {
+    GenerationResult generate(GenerationRequest request);
 }
 ```
 
 구현체는 나중에 교체 가능하게 한다.
 
 ```text
-MockLlmClient
-OpenAiLlmClient
-GeminiLlmClient
-LocalModelLlmClient
+MockTextGenerator
+OpenAiTextGenerator
+GeminiTextGenerator
+LocalTextGenerator
 ```
+
+토론 주제, 형식, 참가자 모델, 이전 발화, 최대 길이를 어떤 프롬프트로 구성할지는 `debate.domain.DebateTurnPromptBuilder`가 소유한다. provider별 request schema, 인증, timeout, retry, 실제 model ID 매핑은 `generation.infrastructure`가 담당한다.
 
 ---
 
@@ -1341,7 +1341,7 @@ SHARED_CONTENT_NOT_FOUND
 1. CreateDebateSessionUseCase 구현
 2. StartDebateSessionUseCase 구현
 3. GenerateNextTurnUseCase 구현
-4. MockLlmClient 구현
+4. MockTextGenerator 구현
 5. DebateTurn 목록 조회 구현
 6. DebateSession 상세 조회 구현
 ```
@@ -1349,7 +1349,7 @@ SHARED_CONTENT_NOT_FOUND
 ### 22.3 3차 구현
 
 ```text
-1. PromptBuilder 구현
+1. DebateTurnPromptBuilder 구현
 2. 실제 LLM API 연동
 3. promptSnapshot 저장
 4. modelName/tokenUsage 저장

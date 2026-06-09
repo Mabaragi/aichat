@@ -28,7 +28,7 @@
 
 - `character`: AI 캐릭터 생성, 수정, 조회, 삭제.
 - `debate`: 토론 세션, 참가자, 턴 생성, 재생성, 목록/상세 조회, 완료.
-- `generation`: LLM prompt 구성과 LLM client abstraction. 현재 `MockLlmClient`가 있다.
+- `generation`: 여러 비즈니스 도메인이 재사용하는 provider-neutral 텍스트 생성 capability. `application`에 생성 계약을 두고 `infrastructure`에 provider adapter를 둔다.
 - `share`: 생성된 토론 콘텐츠의 공유 링크 생성, 조회, 삭제.
 - `user`: MVP 사용자 생성과 조회.
 - `common`: 공통 exception, error response, time abstraction.
@@ -39,6 +39,8 @@
 - `application`: use case와 transaction boundary.
 - `infrastructure`: persistence, external client adapter.
 - `web`: controller, request DTO, response DTO.
+
+`generation`은 별도 비즈니스 도메인이 아니라 지원/platform 모듈이므로 `domain` 계층을 두지 않는다. 토론 프롬프트 정책은 `debate.domain.DebateTurnPromptBuilder`가 소유하고, `generation`은 `debate` 타입을 참조하지 않는다.
 
 ## Current Notes
 

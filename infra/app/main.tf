@@ -159,15 +159,6 @@ resource "aws_instance" "app" {
   }
 }
 
-resource "aws_eip" "app" {
-  domain = "vpc"
-}
-
-resource "aws_eip_association" "app" {
-  allocation_id = aws_eip.app.id
-  instance_id   = aws_instance.app.id
-}
-
 resource "aws_ebs_volume" "data" {
   availability_zone = data.aws_subnet.selected.availability_zone
   size              = var.data_volume_size_gb

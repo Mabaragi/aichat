@@ -62,20 +62,18 @@ jobs:
         run: |
           ACCOUNT_ID="$(aws sts get-caller-identity --query Account --output text)"
           STATE_BUCKET="aichat-tfstate-${ACCOUNT_ID}-${AWS_REGION}"
-          LOCK_TABLE="aichat-tflock-${ACCOUNT_ID}-${AWS_REGION}"
           BACKEND_CONFIG="${RUNNER_TEMP}/aichat-backend.hcl"
 
           cat >"${BACKEND_CONFIG}" <<EOF
 bucket = "${STATE_BUCKET}"
 key = "app/terraform.tfstate"
 region = "${AWS_REGION}"
-dynamodb_table = "${LOCK_TABLE}"
+use_lockfile = true
 encrypt = true
 EOF
 
           echo "ACCOUNT_ID=${ACCOUNT_ID}" >> "$GITHUB_ENV"
           echo "STATE_BUCKET=${STATE_BUCKET}" >> "$GITHUB_ENV"
-          echo "LOCK_TABLE=${LOCK_TABLE}" >> "$GITHUB_ENV"
           echo "BACKEND_CONFIG=${BACKEND_CONFIG}" >> "$GITHUB_ENV"
 
       - name: Apply app infrastructure

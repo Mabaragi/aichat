@@ -4,10 +4,10 @@
 
 ## 구성
 
-- `infra/bootstrap`: Terraform state backend, GitHub OIDC provider, `AWS` role 2개를 만든다.
-- `infra/app`: ECR repository, EC2 instance, EIP, security group, instance profile, EBS data volume을 관리한다.
+- `infra/bootstrap`: S3 state bucket, GitHub OIDC provider, `AWS` role 2개를 만든다.
+- `infra/app`: ECR repository, EC2 instance, security group, instance profile, EBS data volume을 관리한다.
 - `.github/workflows/ci.yml`: `mvn test`, `docker build`, `terraform fmt`, `terraform validate`를 실행한다.
-- `.github/workflows/release.yml`: `infra/app apply` 후 SHA 태그 이미지를 ECR에 push하고, SSM으로 EC2에 배포한다.
+- `.github/workflows/release.yml`: `infra/app apply` 후 SHA 태그 이미지를 ECR에 push하고, SSM으로 EC2에 배포한다. S3 backend는 `use_lockfile = true`만 쓴다.
 
 ## GitHub Repository Variables
 
@@ -30,6 +30,7 @@ terraform apply
 이미 `token.actions.githubusercontent.com` OIDC provider가 계정에 있으면 import 하거나, `github_oidc_provider_arn` 변수로 기존 ARN을 지정한다.
 
 bootstrap output에서 role ARN을 확인한 뒤, 위 repository variables에 넣는다.
+S3 backend의 `use_lockfile = true`를 사용한다.
 
 ## Release Flow
 
@@ -38,4 +39,4 @@ bootstrap output에서 role ARN을 확인한 뒤, 위 repository variables에 �
 - workflow는 `infra/app`을 먼저 apply해서 최신 인프라 상태를 맞춘다.
 - 그 다음 SHA 태그를 사용해 Docker image를 빌드하고 ECR에 push한다.
 - 마지막으로 SSM `AWS-RunShellScript`로 EC2에 이미지를 pull하고 컨테이너를 재시작한다.
-- 배포 후에는 `docker ps`, SSM stdout/stderr, 그리고 EC2 public IP로의 HTTP 응답을 확인한다.
+- 배포 후에는 `docker ps`, SSM stdout/stderr, 그리고 EC2 instance public IP로의 HTTP 응답을 확인한다. EIP는 사용하지 않는다.

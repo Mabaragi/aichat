@@ -6,6 +6,7 @@
 
 - `guides/project-map.md`: 프로젝트 목적, 기술 스택, 주요 패키지 경계, 현재 구현 상태를 요약한다. 새 기능을 추가하거나 낯선 도메인을 건드릴 때 읽는다.
 - `guides/character-cli.md`: `character` CLI 명령 계약, 입력/출력, exit code, 예제를 정리한다. CLI를 직접 호출하는 에이전트 작업 전에 읽는다.
+- `../../development/backend-tdd-guideline.md`: 백엔드 작업에서 TDD를 우선 적용하는 기준과 계층별 테스트 우선순위를 설명한다. 백엔드 기능, 버그 수정, 도메인 규칙을 구현할 때 읽는다.
 - `../../development/character-domain-flow.md`: `character` 도메인의 MVP 구현 순서와 완료 기준을 설명한다. 캐릭터 도메인을 확장할 때 읽는다.
 
 ## Workflows
@@ -16,6 +17,7 @@
 ## Decisions
 
 - `decisions/README.md`: decision note를 언제 쓰고 어떤 형식으로 남길지 설명한다. 구조적 판단이나 되돌리기 어려운 결정을 했을 때 읽는다.
+- `decisions/2026-06-09-generation-boundary.md`: 토론 프롬프트와 공용 텍스트 생성 capability의 책임 경계 및 의존 방향을 기록한다. prompt 또는 LLM provider 연동을 변경할 때 읽는다.
 
 ## Worklogs
 
