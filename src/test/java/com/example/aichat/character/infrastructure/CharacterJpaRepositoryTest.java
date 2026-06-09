@@ -1,10 +1,13 @@
 package com.example.aichat.character.infrastructure;
 
+import com.example.aichat.character.domain.CharacterRepository;
 import jakarta.persistence.EntityManager;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
+import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 
@@ -18,18 +21,34 @@ import static org.assertj.core.api.Assertions.assertThat;
 @DataJpaTest
 @ActiveProfiles("test")
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-class CharacterJpaRepositoryTest {
+@Import(JpaCharacterRepositoryAdapter.class)
+class CharacterJpaRepositoryTest extends CharacterRepositoryContractTest {
 
     private static final LocalDateTime DEFAULT_TIME = LocalDateTime.of(2026, 6, 8, 12, 0);
 
     @Autowired
-    private CharacterJpaRepository repository;
+    private CharacterRepository repository;
+
+    @Autowired
+    private CharacterJpaRepository characterJpaRepository;
 
     @Autowired
     private EntityManager entityManager;
 
     @Autowired
     private DataSource dataSource;
+
+    @Override
+    protected CharacterRepository repository() {
+        return repository;
+    }
+
+    @BeforeEach
+    void cleanDatabase() {
+        characterJpaRepository.deleteAll();
+        characterJpaRepository.flush();
+        entityManager.clear();
+    }
 
     @Test
     void schemaIncludesExpectedCharacterColumns() {
@@ -48,13 +67,13 @@ class CharacterJpaRepositoryTest {
 
     @Test
     void savePersistsAndRoundTripsAllMappedFields() {
-        CharacterJpaEntity saved = repository.saveAndFlush(sampleEntity());
+        CharacterJpaEntity saved = characterJpaRepository.saveAndFlush(sampleEntity());
         Long savedId = CharacterJpaEntityFields.id(saved);
 
         entityManager.clear();
 
         assertThat(savedId).isNotNull();
-        assertThat(repository.findById(savedId))
+        assertThat(characterJpaRepository.findById(savedId))
                 .hasValueSatisfying(entity -> {
                     assertThat(CharacterJpaEntityFields.id(entity)).isEqualTo(savedId);
                     assertThat(CharacterJpaEntityFields.ownerId(entity)).isEqualTo(1L);
@@ -70,8 +89,8 @@ class CharacterJpaRepositoryTest {
 
     @Test
     void findByOwnerIdReturnsOnlyRequestedOwnersCharacters() {
-        CharacterJpaEntity ownerOneFirst = repository.saveAndFlush(sampleEntity());
-        CharacterJpaEntity ownerTwo = repository.saveAndFlush(
+        CharacterJpaEntity ownerOneFirst = characterJpaRepository.saveAndFlush(sampleEntity());
+        CharacterJpaEntity ownerTwo = characterJpaRepository.saveAndFlush(
                 sampleEntity(
                         null,
                         2L,
@@ -84,7 +103,7 @@ class CharacterJpaRepositoryTest {
                         DEFAULT_TIME
                 )
         );
-        CharacterJpaEntity ownerOneSecond = repository.saveAndFlush(
+        CharacterJpaEntity ownerOneSecond = characterJpaRepository.saveAndFlush(
                 sampleEntity(
                         null,
                         1L,
@@ -100,7 +119,7 @@ class CharacterJpaRepositoryTest {
 
         entityManager.clear();
 
-        List<CharacterJpaEntity> ownerOneCharacters = repository.findByOwnerId(1L);
+        List<CharacterJpaEntity> ownerOneCharacters = characterJpaRepository.findByOwnerId(1L);
 
         assertThat(ownerOneCharacters)
                 .hasSize(2)
@@ -108,14 +127,14 @@ class CharacterJpaRepositoryTest {
                 .extracting(CharacterJpaEntityFields::name)
                 .containsExactlyInAnyOrder("합리주의 미식가", "두 번째");
 
-        assertThat(repository.findByOwnerId(99L)).isEmpty();
+        assertThat(characterJpaRepository.findByOwnerId(99L)).isEmpty();
         assertThat(CharacterJpaEntityFields.ownerId(ownerTwo)).isEqualTo(2L);
         assertThat(CharacterJpaEntityFields.id(ownerOneFirst)).isNotEqualTo(CharacterJpaEntityFields.id(ownerOneSecond));
     }
 
     @Test
     void saveWithExistingIdUpdatesPersistedRow() {
-        CharacterJpaEntity saved = repository.saveAndFlush(sampleEntity());
+        CharacterJpaEntity saved = characterJpaRepository.saveAndFlush(sampleEntity());
         Long savedId = CharacterJpaEntityFields.id(saved);
 
         CharacterJpaEntity updated = sampleEntity(
@@ -130,12 +149,12 @@ class CharacterJpaRepositoryTest {
                 DEFAULT_TIME.plusHours(1)
         );
 
-        CharacterJpaEntity reSaved = repository.saveAndFlush(updated);
+        CharacterJpaEntity reSaved = characterJpaRepository.saveAndFlush(updated);
 
         entityManager.clear();
 
         assertThat(CharacterJpaEntityFields.id(reSaved)).isEqualTo(savedId);
-        assertThat(repository.findById(savedId))
+        assertThat(characterJpaRepository.findById(savedId))
                 .hasValueSatisfying(entity -> {
                     assertThat(CharacterJpaEntityFields.id(entity)).isEqualTo(savedId);
                     assertThat(CharacterJpaEntityFields.ownerId(entity)).isEqualTo(1L);
@@ -151,16 +170,16 @@ class CharacterJpaRepositoryTest {
 
     @Test
     void deleteByIdRemovesPersistedRow() {
-        CharacterJpaEntity saved = repository.saveAndFlush(sampleEntity());
+        CharacterJpaEntity saved = characterJpaRepository.saveAndFlush(sampleEntity());
         Long savedId = CharacterJpaEntityFields.id(saved);
 
-        repository.deleteById(savedId);
-        repository.flush();
+        characterJpaRepository.deleteById(savedId);
+        characterJpaRepository.flush();
 
         entityManager.clear();
 
-        assertThat(repository.findById(savedId)).isEmpty();
-        assertThat(repository.findByOwnerId(1L)).isEmpty();
+        assertThat(characterJpaRepository.findById(savedId)).isEmpty();
+        assertThat(characterJpaRepository.findByOwnerId(1L)).isEmpty();
     }
 
     private List<String> columnNames() {

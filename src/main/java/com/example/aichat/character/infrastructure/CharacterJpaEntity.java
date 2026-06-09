@@ -10,6 +10,62 @@ public class CharacterJpaEntity {
     protected CharacterJpaEntity() {
     }
 
+    CharacterJpaEntity(Long id,
+                       Long ownerId,
+                       String name,
+                       String description,
+                       String personality,
+                       String speechStyle,
+                       String visibility,
+                       LocalDateTime createdAt,
+                       LocalDateTime updatedAt) {
+        this.id = id;
+        this.ownerId = ownerId;
+        this.name = name;
+        this.description = description;
+        this.personality = personality;
+        this.speechStyle = speechStyle;
+        this.visibility = visibility;
+        this.createdAt = createdAt;
+        this.updatedAt = updatedAt;
+    }
+
+    Long id() {
+        return id;
+    }
+
+    Long ownerId() {
+        return ownerId;
+    }
+
+    String name() {
+        return name;
+    }
+
+    String description() {
+        return description;
+    }
+
+    String personality() {
+        return personality;
+    }
+
+    String speechStyle() {
+        return speechStyle;
+    }
+
+    String visibility() {
+        return visibility;
+    }
+
+    LocalDateTime createdAt() {
+        return createdAt;
+    }
+
+    LocalDateTime updatedAt() {
+        return updatedAt;
+    }
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -20,11 +76,13 @@ public class CharacterJpaEntity {
     @Column(nullable = false)
     private String name;
 
+    @Column(columnDefinition = "TEXT")
     private String description;
 
+    @Column(columnDefinition = "TEXT")
     private String personality;
 
-    @Column(name = "speech_style")
+    @Column(name = "speech_style", columnDefinition = "TEXT")
     private String speechStyle;
 
     @Column(nullable = false)

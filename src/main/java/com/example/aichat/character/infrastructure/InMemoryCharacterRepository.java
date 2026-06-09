@@ -2,6 +2,7 @@ package com.example.aichat.character.infrastructure;
 
 import com.example.aichat.character.domain.Character;
 import com.example.aichat.character.domain.CharacterRepository;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Repository;
 
 import java.util.Comparator;
@@ -11,6 +12,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 
 @Repository
+@Profile("dev")
 public class InMemoryCharacterRepository implements CharacterRepository {
 
     private final ConcurrentHashMap<Long, Character> storage = new ConcurrentHashMap<>();
