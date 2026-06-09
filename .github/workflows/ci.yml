@@ -30,7 +30,7 @@ jobs:
           terraform_version: 1.15.5
 
       - name: Run Maven tests
-        run: ./mvnw -ntp test
+        run: bash ./mvnw -ntp test
 
       - name: Build Docker image
         run: docker build --pull -t aichat:ci .
