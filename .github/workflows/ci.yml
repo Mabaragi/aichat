@@ -4,7 +4,23 @@ on:
   push:
     branches:
       - "**"
+    paths:
+      - "backend/**"
+      - "frontend/**"
+      - "docs/api/**"
+      - "infra/**"
+      - "scripts/**"
+      - ".github/workflows/ci.yml"
+      - ".github/workflows/release.yml"
   pull_request:
+    paths:
+      - "backend/**"
+      - "frontend/**"
+      - "docs/api/**"
+      - "infra/**"
+      - "scripts/**"
+      - ".github/workflows/ci.yml"
+      - ".github/workflows/release.yml"
 
 permissions:
   contents: read
@@ -23,6 +39,14 @@ jobs:
           distribution: temurin
           java-version: "21"
           cache: maven
+          cache-dependency-path: backend/pom.xml
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
 
       - name: Set up Terraform
         uses: hashicorp/setup-terraform@v3
@@ -32,11 +56,82 @@ jobs:
       - name: Verify release secret flow
         run: python scripts/verify_release_secret_flow.py
 
+      - name: Verify OpenAPI CI flow
+        run: python scripts/verify_openapi_ci_flow.py
+
       - name: Run Maven tests
+        working-directory: backend
         run: bash ./mvnw -ntp test
 
-      - name: Build Docker image
-        run: docker build --pull -t aichat:ci .
+      - name: Export OpenAPI contract
+        working-directory: backend
+        run: bash ./mvnw -ntp -Dtest=OpenApiContractExportTest -Dopenapi.output=target/generated-openapi/openapi.json test
+
+      - name: Verify OpenAPI contract
+        run: python scripts/verify_openapi_contract.py docs/api/openapi.json backend/target/generated-openapi/openapi.json
+
+      - name: Upload OpenAPI contract
+        uses: actions/upload-artifact@v4
+        with:
+          name: openapi-contract-${{ github.sha }}
+          path: backend/target/generated-openapi/openapi.json
+          if-no-files-found: error
+
+      - name: Fetch pull request base contract
+        if: github.event_name == 'pull_request'
+        id: openapi-base
+        run: |
+          git fetch --depth=1 origin "${GITHUB_BASE_REF}"
+          if git cat-file -e "origin/${GITHUB_BASE_REF}:docs/api/openapi.json" 2>/dev/null; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+            echo "Base branch has no OpenAPI contract; skipping the bootstrap breaking-change check."
+          fi
+
+      - name: Check OpenAPI breaking changes
+        if: github.event_name == 'pull_request' && steps.openapi-base.outputs.exists == 'true'
+        uses: oasdiff/oasdiff-action/breaking@v0.0.57
+        with:
+          base: origin/${{ github.base_ref }}:docs/api/openapi.json
+          revision: HEAD:docs/api/openapi.json
+          fail-on: ERR
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Generate frontend API types
+        working-directory: frontend
+        run: npm run generate:api
+
+      - name: Verify generated frontend API types
+        run: git diff --exit-code -- frontend/src/api/generated/backend-schema.d.ts
+
+      - name: Lint frontend
+        working-directory: frontend
+        run: npm run lint
+
+      - name: Typecheck frontend
+        working-directory: frontend
+        run: npm run typecheck
+
+      - name: Test frontend
+        working-directory: frontend
+        run: npm run test
+
+      - name: Build frontend
+        working-directory: frontend
+        env:
+          BACKEND_BASE_URL: http://aichat:8080
+          AUTH_COOKIE_SECURE: "false"
+        run: npm run build
+
+      - name: Build backend Docker image
+        run: docker build --pull -t aichat:ci backend
+
+      - name: Build frontend Docker image
+        run: docker build --pull -t aichat-frontend:ci frontend
 
       - name: Terraform fmt
         run: terraform fmt -check -recursive infra

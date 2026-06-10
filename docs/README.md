@@ -1,16 +1,17 @@
-# Docs
+# Monorepo Docs
 
-이 디렉터리는 프로젝트 문서를 용도별로 분리한다.
+이 디렉터리는 저장소 전체에 적용되는 문서를 둔다.
 
-## 문서 구조
+## Structure
 
-- `development/`: 사람 개발자가 기능을 구현할 때 참고하는 개발 흐름 문서.
-- `agent-vault/`: AI 에이전트가 작업 맥락을 빠르게 찾기 위한 라우터, 작업 가이드, workflow, decision note, worklog.
-- `learnings/`: 사람 개발자가 나중에 읽을 디버깅 기록, 발견 사항, 구현 교훈, 비교/트레이드오프 정리.
+- `agent-vault/`: 모노레포 구조, 공통 workflow, root worklog를 위한 agent context.
+- `api/`: backend와 frontend가 공유하는 API contract와 사용 가이드.
+- `deployment/`: 여러 프로젝트와 공통 인프라를 연결하는 배포 운영 문서.
 
-## 작성 기준
+## Documents
 
-- 코드 식별자, package name, API path, command, file path는 원문 형태로 유지한다.
-- 작업 상태와 검증 결과는 `agent-vault/worklogs`에 둔다.
-- durable architecture 또는 workflow decision은 `agent-vault/decisions`에 둔다.
-- 사람이 읽을 학습 서사는 `learnings`에 둔다.
+- [GitHub Actions + Terraform 배포 가이드](./deployment/aws-cicd.md)
+- [OpenAPI contract](./api/README.md)
+- [Next.js BFF와 배포 경계 결정](./agent-vault/decisions/2026-06-10-next-bff-deployment-boundary.md)
+
+Spring Boot 구현 문서는 `backend/docs`, Next.js 구현 문서는 `frontend/docs`에 둔다.

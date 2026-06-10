@@ -526,19 +526,29 @@ MVP에서는 JPA `ddl-auto=update`로 시작해도 된다.
 
 ## 10. 현재 저장소 구현 상태
 
-이 문서는 MVP 목표 명세와 구현 방향을 함께 기록한다. 현재 저장소는 전체 MVP가 완성된 상태는 아니지만 User, Character와 토론 세션 생성 vertical slice는 실제 동작한다.
+이 문서는 MVP 목표 명세와 구현 방향을 함께 기록한다. 현재 저장소는 전체 MVP가 완성된 상태는 아니지만 User, Character, DebateSession 생성과 turn 생성/조회, session lifecycle의 핵심 흐름은 실제 동작한다.
 
-- 빌드 도구는 Maven이며, 루트에 `pom.xml`, `mvnw`, `mvnw.cmd`가 있다.
+- Spring Boot backend는 `backend/`에 있으며, 해당 디렉터리에 `pom.xml`, `mvnw`, `mvnw.cmd`가 있다.
+- Next.js frontend와 BFF는 `frontend/`에 있으며, 회원가입·로그인·로그아웃, 내 정보,
+  캐릭터 목록·생성, 토론 세션 생성과 생성 결과 확인 화면을 제공한다.
+- 브라우저는 Next Route Handler만 호출한다. access/refresh JWT는 HttpOnly cookie에
+  저장하며 브라우저 JavaScript와 인증 응답 JSON에 노출하지 않는다.
+- frontend TypeScript API type은 `docs/api/openapi.json`에서 생성하고 CI에서 drift를
+  검사한다.
 - 기준 패키지는 `com.example.aichat`이다.
-- 설정 파일은 `src/main/resources/application.yaml`이며, SQLite 데이터베이스 `./data/ai-debate.db`를 사용한다.
+- 설정 파일은 `backend/src/main/resources/application.yaml`이며, backend current directory 기준 SQLite 데이터베이스 `./data/ai-debate.db`를 사용한다.
 - `User` 생성과 JPA 저장, `Character` CRUD와 JPA 저장이 구현되어 있다.
 - `POST /api/debate-sessions`는 사용자와 캐릭터를 검증하고 캐릭터 스냅샷 기반 참가자 2명을 포함한 세션을 SQLite에 저장한다.
 - `DebateSession`은 participant를 소유하는 aggregate root이며 별도 `DebateParticipantRepository`를 두지 않는다.
-- `StartDebateSession`, turn 생성/조회, 세션 조회/완료와 share 기능은 아직 구현 전이다.
-- 토론 프롬프트 정책은 `debate.domain.DebateTurnPromptBuilder`가 담당한다. 공용 생성 계약은 `generation.application`의 `TextGenerator`, `GenerationRequest`, `GenerationResult`로 구성되고, `generation.infrastructure.MockTextGenerator`가 deterministic mock 응답을 제공한다.
-- `OpenAiTextGenerator`와 `GeminiTextGenerator` provider adapter 및 단위 테스트가 구현되어 있다. 아직 Spring bean 등록, provider 선택 설정, `GenerateNextTurnUseCase` orchestration 연결은 구현 전이다.
+- `POST /api/debate-sessions/{sessionId}/start`, `POST /api/debate-sessions/{sessionId}/complete`, `POST /api/debate-sessions/{sessionId}/turns/generate`, `GET /api/debate-sessions/{sessionId}/turns`가 구현되어 있다.
+- 토론 프롬프트 정책은 `debate.domain.DebateTurnPromptBuilder`가 담당한다. 공용 생성 계약은 `generation.application`의 `TextGenerator`, `GenerationRequest`, `GenerationResult`로 구성되고, `generation.infrastructure.MockTextGenerator`가 deterministic mock 응답을 제공한다. `generation.infrastructure`는 Spring `@ConfigurationProperties` 기반 provider wiring을 사용해 `GENERATION_PROVIDER`와 API key env를 주입한다.
+- `OpenAiTextGenerator`와 `GeminiTextGenerator` provider adapter 및 단위 테스트가 구현되어 있다. provider 선택 설정과 `GenerateDebateTurnUseCase` orchestration 연결도 구현되어 있다.
 - HTTP API는 Bearer JWT 인증을 사용하며 Character와 DebateSession 생성의 소유자는 access token의 `sub`에서 결정한다.
 - 운영 JWT 서명 키는 SSM SecureString `/aichat/prod/jwt-secret`에서 EC2 instance role이 조회해 container의 `JWT_SECRET` 환경변수로 주입한다. secret 값은 Terraform state나 GitHub Secrets에 저장하지 않으며, 테스트는 `application-test.yaml`의 고정 test secret을 사용한다.
+- 운영 배포는 같은 EC2 Docker network에서 Spring과 Next를 실행한다. 외부에는 Next의
+  port 80만 공개하고 Spring은 host `127.0.0.1:8080`과 Docker network에서만 접근한다.
+- 현재 HTTP 배포는 `AUTH_COOKIE_SECURE=false`를 명시한다. domain/TLS 전환 시 반드시
+  `true`로 바꾸고 public 443을 사용한다.
 - SQLite MVP에서는 `debate_sessions.id`를 persistence adapter가 현재 최대값 이후로 할당한다. 단일 애플리케이션 인스턴스를 전제로 JVM 내 할당을 직렬화한다.
 
 ---
@@ -561,7 +571,7 @@ MVP에서는 JPA `ddl-auto=update`로 시작해도 된다.
 
 ### 11.2 pom.xml 의존성/플러그인 기준
 
-현재 루트 `pom.xml`은 Spring Boot parent와 다음 의존성을 기준으로 한다.
+현재 `backend/pom.xml`은 Spring Boot parent와 다음 의존성을 기준으로 한다.
 
 ```xml
 <dependencies>
@@ -606,6 +616,7 @@ MVP에서는 JPA `ddl-auto=update`로 시작해도 된다.
 Windows 기준 실행/검증 명령은 다음과 같다.
 
 ```powershell
+cd backend
 .\mvnw.cmd test
 .\mvnw.cmd spring-boot:run
 ```
@@ -632,6 +643,21 @@ spring:
 
 server:
   port: 8080
+
+generation:
+  provider: ${GENERATION_PROVIDER:mock}
+  mock:
+    model-name: ${GENERATION_MOCK_MODEL:mock-model}
+  openai:
+    api-key: ${OPENAI_API_KEY:}
+    fast-model: ${OPENAI_FAST_MODEL:gpt-5-mini}
+    balanced-model: ${OPENAI_BALANCED_MODEL:gpt-5}
+    quality-model: ${OPENAI_QUALITY_MODEL:gpt-5}
+  gemini:
+    api-key: ${GEMINI_API_KEY:}
+    fast-model: ${GEMINI_FAST_MODEL:gemini-2.5-flash}
+    balanced-model: ${GEMINI_BALANCED_MODEL:gemini-2.5-flash}
+    quality-model: ${GEMINI_QUALITY_MODEL:gemini-2.5-pro}
 ```
 
 ---
@@ -641,7 +667,7 @@ server:
 초기에는 모듈러 모놀리스 구조를 사용한다.
 
 ```text
-src/main/java/com/example/aichat
+backend/src/main/java/com/example/aichat
  ├─ user
  │   ├─ domain
  │   ├─ application
@@ -739,7 +765,8 @@ web
 
 ## 14. API 명세 초안
 
-이 섹션은 앞으로 구현할 MVP 목표 API 명세다. 현재 코드에는 컨트롤러 클래스와 베이스 경로만 있으며, 실제 HTTP 메서드, Request DTO 필드, Response DTO 필드는 아직 구현 전이다.
+이 섹션은 MVP 목표 API와 현재 구현된 HTTP 계약을 함께 기록한다. 기계 판독 가능한 현재
+계약은 `docs/api/openapi.json`을 기준으로 하며, frontend는 이 파일에서 type을 생성한다.
 
 현재 선언된 베이스 경로:
 
@@ -987,6 +1014,16 @@ GET /api/debate-sessions?ownerId=1
 
 ```http
 POST /api/debate-sessions/{sessionId}/complete
+```
+
+Response:
+
+```json
+{
+  "id": 1,
+  "status": "COMPLETED",
+  "endedAt": "2026-06-05T12:10:00"
+}
 ```
 
 ---

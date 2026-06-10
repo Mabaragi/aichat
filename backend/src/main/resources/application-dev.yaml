@@ -1,0 +1,18 @@
+security:
+  jwt:
+    secret: ZGV2LWp3dC1zZWNyZXQta2V5LXRoYXQtaXMtYXQtbGVhc3QtMzItYnl0ZXMtbG9uZw==
+
+generation:
+  provider: ${GENERATION_PROVIDER:mock}
+  mock:
+    model-name: ${GENERATION_MOCK_MODEL:mock-model}
+  openai:
+    api-key: ${OPENAI_API_KEY:}
+    fast-model: ${OPENAI_FAST_MODEL:gpt-5-mini}
+    balanced-model: ${OPENAI_BALANCED_MODEL:gpt-5}
+    quality-model: ${OPENAI_QUALITY_MODEL:gpt-5}
+  gemini:
+    api-key: ${GEMINI_API_KEY:}
+    fast-model: ${GEMINI_FAST_MODEL:gemini-2.5-flash}
+    balanced-model: ${GEMINI_BALANCED_MODEL:gemini-2.5-flash}
+    quality-model: ${GEMINI_QUALITY_MODEL:gemini-2.5-pro}

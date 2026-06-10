@@ -31,7 +31,8 @@ jobs:
     env:
       AWS_REGION: ${{ vars.AWS_REGION || 'ap-northeast-2' }}
       TARGET_SHA: ${{ inputs.sha || github.event.workflow_run.head_sha || github.sha }}
-      APP_PORT: "8080"
+      APP_PORT: "80"
+      BACKEND_PORT: "8080"
       REPOSITORY_NAME: "aichat"
 
     steps:
@@ -87,6 +88,9 @@ jobs:
           echo "EC2_INSTANCE_ID=$(terraform -chdir=infra/app output -raw ec2_instance_id)" >> "$GITHUB_ENV"
           echo "EC2_PUBLIC_IP=$(terraform -chdir=infra/app output -raw ec2_public_ip)" >> "$GITHUB_ENV"
           echo "JWT_SECRET_PARAMETER_NAME=$(terraform -chdir=infra/app output -raw jwt_secret_parameter_name)" >> "$GITHUB_ENV"
+          echo "GENERATION_PROVIDER=$(terraform -chdir=infra/app output -raw generation_provider)" >> "$GITHUB_ENV"
+          echo "OPENAI_API_KEY_PARAMETER_NAME=$(terraform -chdir=infra/app output -raw openai_api_key_parameter_name)" >> "$GITHUB_ENV"
+          echo "GEMINI_API_KEY_PARAMETER_NAME=$(terraform -chdir=infra/app output -raw gemini_api_key_parameter_name)" >> "$GITHUB_ENV"
 
       - name: Assume deploy role
         uses: aws-actions/configure-aws-credentials@v4
@@ -95,20 +99,30 @@ jobs:
           role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
           role-session-name: aichat-deploy-${{ github.run_id }}
 
-      - name: Build and push image
+      - name: Build and push images
         run: |
-          IMAGE_URI="${ECR_REPOSITORY_URL}:${TARGET_SHA}"
+          BACKEND_IMAGE_URI="${ECR_REPOSITORY_URL}:${TARGET_SHA}"
+          FRONTEND_IMAGE_URI="${ECR_REPOSITORY_URL}:frontend-${TARGET_SHA}"
           ECR_REGISTRY="${ECR_REPOSITORY_URL%%/*}"
 
-          echo "IMAGE_URI=${IMAGE_URI}" >> "$GITHUB_ENV"
+          echo "BACKEND_IMAGE_URI=${BACKEND_IMAGE_URI}" >> "$GITHUB_ENV"
+          echo "FRONTEND_IMAGE_URI=${FRONTEND_IMAGE_URI}" >> "$GITHUB_ENV"
           echo "ECR_REGISTRY=${ECR_REGISTRY}" >> "$GITHUB_ENV"
 
+          aws ecr get-login-password --region "${AWS_REGION}" | docker login --username AWS --password-stdin "${ECR_REGISTRY}"
+
           if aws ecr describe-images --repository-name "${REPOSITORY_NAME}" --image-ids imageTag="${TARGET_SHA}" >/dev/null 2>&1; then
-            echo "Image tag ${TARGET_SHA} already exists in ECR; skipping build and push."
+            echo "Backend image tag ${TARGET_SHA} already exists in ECR; skipping build and push."
           else
-            aws ecr get-login-password --region "${AWS_REGION}" | docker login --username AWS --password-stdin "${ECR_REGISTRY}"
-            docker build -t "${IMAGE_URI}" .
-            docker push "${IMAGE_URI}"
+            docker build -t "${BACKEND_IMAGE_URI}" backend
+            docker push "${BACKEND_IMAGE_URI}"
+          fi
+
+          if aws ecr describe-images --repository-name "${REPOSITORY_NAME}" --image-ids imageTag="frontend-${TARGET_SHA}" >/dev/null 2>&1; then
+            echo "Frontend image tag frontend-${TARGET_SHA} already exists in ECR; skipping build and push."
+          else
+            docker build -t "${FRONTEND_IMAGE_URI}" frontend
+            docker push "${FRONTEND_IMAGE_URI}"
           fi
 
       - name: Send SSM deploy command
@@ -120,10 +134,15 @@ jobs:
           from pathlib import Path
 
           aws_region = os.environ["AWS_REGION"]
-          image_uri = os.environ["IMAGE_URI"]
+          backend_image_uri = os.environ["BACKEND_IMAGE_URI"]
+          frontend_image_uri = os.environ["FRONTEND_IMAGE_URI"]
           ecr_registry = os.environ["ECR_REGISTRY"]
           app_port = os.environ["APP_PORT"]
+          backend_port = os.environ["BACKEND_PORT"]
           jwt_secret_parameter_name = os.environ["JWT_SECRET_PARAMETER_NAME"]
+          generation_provider = os.environ["GENERATION_PROVIDER"]
+          openai_api_key_parameter_name = os.environ["OPENAI_API_KEY_PARAMETER_NAME"]
+          gemini_api_key_parameter_name = os.environ["GEMINI_API_KEY_PARAMETER_NAME"]
           mount_path = "/home/ubuntu/aichat/data"
           output_path = Path("ssm-parameters.json")
 
@@ -132,17 +151,24 @@ jobs:
               "#!/usr/bin/env bash",
               "set -euo pipefail",
               "cleanup() {",
-              "  unset JWT_SECRET || true",
+              "  unset JWT_SECRET OPENAI_API_KEY GEMINI_API_KEY || true",
               "  rm -f /tmp/aichat-deploy.sh",
               "}",
               "trap cleanup EXIT",
               "",
               "AWS_REGION='__AWS_REGION__'",
               "ECR_REGISTRY='__ECR_REGISTRY__'",
-              "IMAGE_URI='__IMAGE_URI__'",
+              "BACKEND_IMAGE_URI='__BACKEND_IMAGE_URI__'",
+              "FRONTEND_IMAGE_URI='__FRONTEND_IMAGE_URI__'",
               "APP_PORT='__APP_PORT__'",
+              "BACKEND_PORT='__BACKEND_PORT__'",
               "JWT_SECRET_PARAMETER_NAME='__JWT_SECRET_PARAMETER_NAME__'",
-              "CONTAINER_NAME='aichat'",
+              "GENERATION_PROVIDER='__GENERATION_PROVIDER__'",
+              "OPENAI_API_KEY_PARAMETER_NAME='__OPENAI_API_KEY_PARAMETER_NAME__'",
+              "GEMINI_API_KEY_PARAMETER_NAME='__GEMINI_API_KEY_PARAMETER_NAME__'",
+              "BACKEND_CONTAINER_NAME='aichat'",
+              "FRONTEND_CONTAINER_NAME='aichat-frontend'",
+              "NETWORK_NAME='aichat-network'",
               "MOUNT_PATH='__MOUNT_PATH__'",
               "",
               "aws --version",
@@ -152,38 +178,98 @@ jobs:
               "  echo \"JWT secret parameter is missing or empty: $JWT_SECRET_PARAMETER_NAME\" >&2",
               "  exit 1",
               "fi",
+              "docker_env=(",
+              "  -e \"JWT_SECRET=$JWT_SECRET\"",
+              "  -e \"GENERATION_PROVIDER=$GENERATION_PROVIDER\"",
+              "  -e \"JAVA_TOOL_OPTIONS=-Xms128m -Xmx512m -Duser.timezone=UTC\"",
+              ")",
+              "case \"$GENERATION_PROVIDER\" in",
+              "  openai)",
+              "    OPENAI_API_KEY=\"$(aws ssm get-parameter --region \"$AWS_REGION\" --name \"$OPENAI_API_KEY_PARAMETER_NAME\" --with-decryption --query 'Parameter.Value' --output text)\"",
+              "    if [ -z \"$OPENAI_API_KEY\" ] || [ \"$OPENAI_API_KEY\" = 'None' ]; then",
+              "      echo \"OpenAI API key parameter is missing or empty: $OPENAI_API_KEY_PARAMETER_NAME\" >&2",
+              "      exit 1",
+              "    fi",
+              "    docker_env+=( -e \"OPENAI_API_KEY=$OPENAI_API_KEY\" )",
+              "    ;;",
+              "  gemini)",
+              "    GEMINI_API_KEY=\"$(aws ssm get-parameter --region \"$AWS_REGION\" --name \"$GEMINI_API_KEY_PARAMETER_NAME\" --with-decryption --query 'Parameter.Value' --output text)\"",
+              "    if [ -z \"$GEMINI_API_KEY\" ] || [ \"$GEMINI_API_KEY\" = 'None' ]; then",
+              "      echo \"Gemini API key parameter is missing or empty: $GEMINI_API_KEY_PARAMETER_NAME\" >&2",
+              "      exit 1",
+              "    fi",
+              "    docker_env+=( -e \"GEMINI_API_KEY=$GEMINI_API_KEY\" )",
+              "    ;;",
+              "  mock)",
+              "    ;;",
+              "  *)",
+              "    echo \"Unsupported generation provider: $GENERATION_PROVIDER\" >&2",
+              "    exit 1",
+              "    ;;",
+              "esac",
               "aws ecr get-login-password --region \"$AWS_REGION\" | docker login --username AWS --password-stdin \"$ECR_REGISTRY\"",
-              "docker rm -f \"$CONTAINER_NAME\" 2>/dev/null || true",
-              "docker pull \"$IMAGE_URI\"",
+              "docker pull \"$BACKEND_IMAGE_URI\"",
+              "docker pull \"$FRONTEND_IMAGE_URI\"",
+              "docker network inspect \"$NETWORK_NAME\" >/dev/null 2>&1 || docker network create \"$NETWORK_NAME\"",
+              "docker rm -f \"$FRONTEND_CONTAINER_NAME\" 2>/dev/null || true",
+              "docker rm -f \"$BACKEND_CONTAINER_NAME\" 2>/dev/null || true",
               "docker run -d \\",
-              "  --name \"$CONTAINER_NAME\" \\",
+              "  --name \"$BACKEND_CONTAINER_NAME\" \\",
               "  --restart unless-stopped \\",
-              "  -p \"${APP_PORT}:8080\" \\",
+              "  --network \"$NETWORK_NAME\" \\",
+              "  -p \"127.0.0.1:${BACKEND_PORT}:8080\" \\",
               "  -v \"${MOUNT_PATH}:/app/data\" \\",
-              "  -e JWT_SECRET=\"$JWT_SECRET\" \\",
-              "  -e JAVA_TOOL_OPTIONS=\"-Xms128m -Xmx512m -Duser.timezone=UTC\" \\",
-              "  \"$IMAGE_URI\"",
-              "unset JWT_SECRET",
+              "  \"${docker_env[@]}\" \\",
+              "  \"$BACKEND_IMAGE_URI\"",
+              "unset JWT_SECRET OPENAI_API_KEY GEMINI_API_KEY",
               "",
-              "ready=0",
+              "backend_ready=0",
               "attempt=1",
               "while [ \"$attempt\" -le 6 ]; do",
-              "  if curl -sS -o /dev/null --max-time 10 \"http://127.0.0.1:${APP_PORT}/\"; then",
-              "    ready=1",
+              "  if curl -sS -o /dev/null --max-time 10 \"http://127.0.0.1:${BACKEND_PORT}/\"; then",
+              "    backend_ready=1",
               "    break",
               "  fi",
-              "  echo \"Waiting for application readiness (attempt ${attempt})\"",
+              "  echo \"Waiting for backend readiness (attempt ${attempt})\"",
               "  attempt=$((attempt + 1))",
               "  sleep 5",
               "done",
               "",
-              "if [ \"$ready\" -ne 1 ]; then",
-              "  docker logs --tail 200 \"$CONTAINER_NAME\" || true",
+              "if [ \"$backend_ready\" -ne 1 ]; then",
+              "  docker logs --tail 200 \"$BACKEND_CONTAINER_NAME\" || true",
               "  exit 1",
               "fi",
               "",
+              "docker run -d \\",
+              "  --name \"$FRONTEND_CONTAINER_NAME\" \\",
+              "  --restart unless-stopped \\",
+              "  --network \"$NETWORK_NAME\" \\",
+              "  -p \"${APP_PORT}:3000\" \\",
+              "  -e BACKEND_BASE_URL=\"http://aichat:8080\" \\",
+              "  -e AUTH_COOKIE_SECURE=\"false\" \\",
+              "  -e NODE_OPTIONS=\"--max-old-space-size=256\" \\",
+              "  \"$FRONTEND_IMAGE_URI\"",
+              "",
+              "frontend_ready=0",
+              "attempt=1",
+              "while [ \"$attempt\" -le 6 ]; do",
+              "  if curl -sS -o /dev/null --max-time 10 \"http://127.0.0.1:${APP_PORT}/\"; then",
+              "    frontend_ready=1",
+              "    break",
+              "  fi",
+              "  echo \"Waiting for frontend readiness (attempt ${attempt})\"",
+              "  attempt=$((attempt + 1))",
+              "  sleep 5",
+              "done",
+              "",
+              "if [ \"$frontend_ready\" -ne 1 ]; then",
+              "  docker logs --tail 200 \"$FRONTEND_CONTAINER_NAME\" || true",
+              "  exit 1",
+              "fi",
+              "",
+              "curl -sS -D - -o /dev/null -w 'BACKEND_HTTP_STATUS=%{http_code}\\n' --max-time 10 \"http://127.0.0.1:${BACKEND_PORT}/\" || true",
               "curl -sS -D - -o /dev/null -w 'HTTP_STATUS=%{http_code}\\n' --max-time 10 \"http://127.0.0.1:${APP_PORT}/\" || true",
-              "docker ps --filter \"name=$CONTAINER_NAME\"",
+              "docker ps --filter \"name=$BACKEND_CONTAINER_NAME\" --filter \"name=$FRONTEND_CONTAINER_NAME\"",
               "EOF",
               "bash /tmp/aichat-deploy.sh",
           ])
@@ -192,9 +278,14 @@ jobs:
               script
               .replace("__AWS_REGION__", aws_region)
               .replace("__ECR_REGISTRY__", ecr_registry)
-              .replace("__IMAGE_URI__", image_uri)
+              .replace("__BACKEND_IMAGE_URI__", backend_image_uri)
+              .replace("__FRONTEND_IMAGE_URI__", frontend_image_uri)
               .replace("__APP_PORT__", app_port)
+              .replace("__BACKEND_PORT__", backend_port)
               .replace("__JWT_SECRET_PARAMETER_NAME__", jwt_secret_parameter_name)
+              .replace("__GENERATION_PROVIDER__", generation_provider)
+              .replace("__OPENAI_API_KEY_PARAMETER_NAME__", openai_api_key_parameter_name)
+              .replace("__GEMINI_API_KEY_PARAMETER_NAME__", gemini_api_key_parameter_name)
               .replace("__MOUNT_PATH__", mount_path)
           )
 
@@ -232,7 +323,7 @@ jobs:
         run: |
           for attempt in 1 2 3 4 5; do
             set +e
-            HTTP_STATUS="$(curl -sS -o /dev/null -w '%{http_code}' --max-time 10 "http://${EC2_PUBLIC_IP}:${APP_PORT}/")"
+            HTTP_STATUS="$(curl -sS -o /dev/null -w '%{http_code}' --max-time 10 "http://${EC2_PUBLIC_IP}/")"
             CURL_STATUS=$?
             set -e
 
@@ -251,3 +342,12 @@ jobs:
 
           echo "Public endpoint did not return an expected HTTP status" >&2
           exit 1
+
+      - name: Verify backend port is private
+        run: |
+          if curl -sS -o /dev/null --max-time 5 "http://${EC2_PUBLIC_IP}:8080/"; then
+            echo "Backend port 8080 is unexpectedly reachable from the public internet" >&2
+            exit 1
+          fi
+
+          echo "Backend port 8080 is not publicly reachable."

@@ -66,6 +66,16 @@ data "aws_iam_policy_document" "ec2_jwt_secret_read" {
   }
 }
 
+data "aws_iam_policy_document" "ec2_generation_api_keys_read" {
+  statement {
+    actions = ["ssm:GetParameter"]
+    resources = [
+      "arn:${data.aws_partition.current.partition}:ssm:${var.aws_region}:${data.aws_caller_identity.current.account_id}:parameter${var.openai_api_key_parameter_name}",
+      "arn:${data.aws_partition.current.partition}:ssm:${var.aws_region}:${data.aws_caller_identity.current.account_id}:parameter${var.gemini_api_key_parameter_name}"
+    ]
+  }
+}
+
 resource "aws_ecr_repository" "app" {
   name                 = var.repository_name
   image_tag_mutability = "IMMUTABLE"
@@ -86,11 +96,11 @@ resource "aws_ecr_lifecycle_policy" "app" {
     rules = [
       {
         rulePriority = 1
-        description  = "Keep the last 20 images"
+        description  = "Keep the last 40 backend and frontend images"
         selection = {
           tagStatus   = "any"
           countType   = "imageCountMoreThan"
-          countNumber = 20
+          countNumber = 40
         }
         action = {
           type = "expire"
@@ -119,6 +129,12 @@ resource "aws_iam_role_policy" "ec2_jwt_secret_read" {
   name   = "${var.ec2_role_name}-jwt-secret-read"
   role   = aws_iam_role.ec2.id
   policy = data.aws_iam_policy_document.ec2_jwt_secret_read.json
+}
+
+resource "aws_iam_role_policy" "ec2_generation_api_keys_read" {
+  name   = "${var.ec2_role_name}-generation-api-keys-read"
+  role   = aws_iam_role.ec2.id
+  policy = data.aws_iam_policy_document.ec2_generation_api_keys_read.json
 }
 
 resource "aws_iam_instance_profile" "ec2" {

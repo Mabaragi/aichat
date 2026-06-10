@@ -33,3 +33,15 @@ output "ec2_role_arn" {
 output "jwt_secret_parameter_name" {
   value = var.jwt_secret_parameter_name
 }
+
+output "generation_provider" {
+  value = lower(var.generation_provider)
+}
+
+output "openai_api_key_parameter_name" {
+  value = var.openai_api_key_parameter_name
+}
+
+output "gemini_api_key_parameter_name" {
+  value = var.gemini_api_key_parameter_name
+}
