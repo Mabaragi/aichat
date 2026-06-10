@@ -50,6 +50,7 @@ class UserJpaRepositoryTest {
         assertThat(columnNames()).containsExactlyInAnyOrder(
                 "id",
                 "email",
+                "password_hash",
                 "nickname",
                 "created_at"
         );
@@ -66,6 +67,7 @@ class UserJpaRepositoryTest {
                 .hasValueSatisfying(user -> {
                     assertThat(user.getId()).isEqualTo(saved.getId());
                     assertThat(user.getEmail()).isEqualTo("user@example.com");
+                    assertThat(user.getPasswordHash()).isEqualTo("{bcrypt}hash");
                     assertThat(user.getNickname()).isEqualTo("마바라기");
                     assertThat(user.getCreatedAt()).isEqualTo(DEFAULT_TIME);
                 });
@@ -80,6 +82,6 @@ class UserJpaRepositoryTest {
     }
 
     private static User sampleUser() {
-        return User.create("user@example.com", "마바라기", DEFAULT_TIME);
+        return User.create("user@example.com", "{bcrypt}hash", "마바라기", DEFAULT_TIME);
     }
 }

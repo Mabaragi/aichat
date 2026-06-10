@@ -12,7 +12,6 @@ import jakarta.validation.constraints.Size;
 import java.util.List;
 
 public record CreateDebateSessionRequest(
-        @NotNull Long ownerId,
         @NotNull @Valid TopicRequest topic,
         @NotNull DebateFormat format,
         @Min(1) @Max(10) int maxRounds,

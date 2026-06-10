@@ -27,10 +27,22 @@ public class JpaUserRepositoryAdapter implements UserRepository {
                 .map(JpaUserRepositoryAdapter::toDomain);
     }
 
+    @Override
+    public Optional<User> findByEmail(String email) {
+        return userJpaRepository.findByEmail(User.normalizeEmail(email))
+                .map(JpaUserRepositoryAdapter::toDomain);
+    }
+
+    @Override
+    public boolean existsByEmail(String email) {
+        return userJpaRepository.existsByEmail(User.normalizeEmail(email));
+    }
+
     private static UserJpaEntity toEntity(User user) {
         return new UserJpaEntity(
                 user.getId(),
                 user.getEmail(),
+                user.getPasswordHash(),
                 user.getNickname(),
                 user.getCreatedAt()
         );
@@ -40,6 +52,7 @@ public class JpaUserRepositoryAdapter implements UserRepository {
         return new User(
                 entity.id(),
                 entity.email(),
+                entity.passwordHash(),
                 entity.nickname(),
                 entity.createdAt()
         );

@@ -33,7 +33,9 @@ MVP에서 검증할 핵심 가설은 다음과 같다.
 
 MVP에서 구현할 기능은 다음과 같다.
 
-- 사용자 생성
+- 이메일/비밀번호 회원가입
+- JWT 로그인, access token 갱신, 로그아웃
+- 사용자 소유 리소스 인증/인가
 - AI 캐릭터 생성
 - AI 캐릭터 목록 조회
 - 토론 세션 생성
@@ -50,8 +52,9 @@ MVP에서 구현할 기능은 다음과 같다.
 
 MVP에서는 다음 기능을 구현하지 않는다.
 
-- 복잡한 회원 인증/인가
 - 소셜 로그인
+- 관리자 역할 및 권한 체계
+- access token blacklist
 - 캐릭터 장기 기억
 - 캐릭터 간 관계도
 - 세계관 설정
@@ -124,7 +127,9 @@ User
 
 서비스 사용자다.
 
-MVP에서는 인증 시스템을 복잡하게 만들지 않고, 최소 사용자 식별 정보만 둔다.
+MVP에서는 이메일/비밀번호 회원가입과 Bearer JWT 인증을 사용한다. Access token은
+15분, Refresh token은 14일 동안 유효하며 Refresh token은 서버에 SHA-256 해시로
+저장하고 갱신할 때마다 회전한다.
 
 주요 책임:
 
@@ -215,6 +220,7 @@ MVP에서는 실제 기능 구현을 미뤄도 되지만, 향후 확장을 위�
 |---|---|---|
 | id | Long | 사용자 ID |
 | email | String | 이메일 |
+| passwordHash | String | Delegating PasswordEncoder로 인코딩한 비밀번호 |
 | nickname | String | 닉네임 |
 | createdAt | LocalDateTime | 생성일 |
 
@@ -409,8 +415,22 @@ SQLite 기준으로 시작한다.
 CREATE TABLE users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     email TEXT NOT NULL UNIQUE,
+    password_hash TEXT NOT NULL,
     nickname TEXT NOT NULL,
     created_at TEXT NOT NULL
+);
+
+CREATE TABLE refresh_tokens (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    family_id BLOB NOT NULL,
+    session_id TEXT NOT NULL,
+    token_hash TEXT NOT NULL UNIQUE,
+    expires_at TEXT NOT NULL,
+    revoked_at TEXT,
+    replaced_by_hash TEXT,
+    version INTEGER NOT NULL,
+    FOREIGN KEY (user_id) REFERENCES users(id)
 );
 
 CREATE TABLE characters (
@@ -516,6 +536,8 @@ MVP에서는 JPA `ddl-auto=update`로 시작해도 된다.
 - `DebateSession`은 participant를 소유하는 aggregate root이며 별도 `DebateParticipantRepository`를 두지 않는다.
 - `StartDebateSession`, turn 생성/조회, 세션 조회/완료와 share 기능은 아직 구현 전이다.
 - 토론 프롬프트 정책은 `debate.domain.DebateTurnPromptBuilder`가 담당한다. 공용 생성 계약은 `generation.application`의 `TextGenerator`, `GenerationRequest`, `GenerationResult`로 구성되고, `generation.infrastructure.MockTextGenerator`가 deterministic mock 응답을 제공한다.
+- `OpenAiTextGenerator`와 `GeminiTextGenerator` provider adapter 및 단위 테스트가 구현되어 있다. 아직 Spring bean 등록, provider 선택 설정, `GenerateNextTurnUseCase` orchestration 연결은 구현 전이다.
+- HTTP API는 Bearer JWT 인증을 사용하며 Character와 DebateSession 생성의 소유자는 access token의 `sub`에서 결정한다.
 - SQLite MVP에서는 `debate_sessions.id`를 persistence adapter가 현재 최대값 이후로 할당한다. 단일 애플리케이션 인스턴스를 전제로 JVM 내 할당을 직렬화한다.
 
 ---
@@ -722,6 +744,7 @@ web
 
 ```text
 /api/users
+/api/auth
 /api/characters
 /api/debate-sessions
 /api/debate-sessions/{sessionId}/turns
@@ -729,10 +752,10 @@ web
 
 ## 14.1 User API
 
-### 사용자 생성
+### 회원가입
 
 ```http
-POST /api/users
+POST /api/auth/signup
 ```
 
 Request:
@@ -740,6 +763,7 @@ Request:
 ```json
 {
   "email": "user@example.com",
+  "password": "password123",
   "nickname": "마바라기"
 }
 ```
@@ -748,12 +772,32 @@ Response:
 
 ```json
 {
-  "id": 1,
-  "email": "user@example.com",
-  "nickname": "마바라기",
-  "createdAt": "2026-06-05T12:00:00"
+  "user": {
+    "id": 1,
+    "email": "user@example.com",
+    "nickname": "마바라기",
+    "createdAt": "2026-06-05T12:00:00"
+  },
+  "accessToken": "<jwt>",
+  "refreshToken": "<jwt>",
+  "tokenType": "Bearer",
+  "expiresIn": 900
 }
 ```
+
+### 로그인 및 토큰 관리
+
+```text
+POST /api/auth/login
+POST /api/auth/refresh
+POST /api/auth/logout
+GET  /api/users/me
+```
+
+- `/api/auth/refresh`는 Refresh token을 request body로 받고 Access/Refresh token을 모두 교체한다.
+- 회전된 Refresh token이 다시 사용되면 같은 token family를 모두 폐기한다.
+- `/api/auth/logout`은 해당 token family를 폐기하고 멱등적으로 `204`를 반환한다.
+- Access token은 `Authorization: Bearer <access-token>` header로 전달한다.
 
 ---
 
@@ -763,13 +807,13 @@ Response:
 
 ```http
 POST /api/characters
+Authorization: Bearer <access-token>
 ```
 
 Request:
 
 ```json
 {
-  "ownerId": 1,
   "name": "합리주의 미식가",
   "description": "논리적이고 차분하게 음식 취향을 분석하는 캐릭터",
   "personality": {
@@ -806,6 +850,11 @@ Response:
 GET /api/characters?ownerId=1
 ```
 
+익명 사용자는 `PUBLIC` 캐릭터만 조회할 수 있다. `PRIVATE` 캐릭터는 소유자 access
+token이 있을 때만 조회할 수 있으며, 다른 사용자의 접근에는 존재를 숨기기 위해
+`404 CHARACTER_NOT_FOUND`를 반환한다. 생성·수정·삭제의 소유자는 request body가
+아니라 access token의 `sub` claim에서 결정한다.
+
 ### 캐릭터 단건 조회
 
 ```http
@@ -839,7 +888,6 @@ Request:
 
 ```json
 {
-  "ownerId": 1,
   "topic": {
     "title": "부먹 vs 찍먹",
     "description": "탕수육 소스를 부어 먹는 것과 찍어 먹는 것 중 어느 방식이 더 나은가?",
@@ -861,9 +909,9 @@ Request:
 }
 ```
 
-JWT 인증으로 전환한 후에는 `ownerId`를 request body에서 받지 않는다. Spring Security가 검증한 access token의 `sub` claim을 web 계층에서 `authenticatedUserId`로 변환해 `CreateDebateSessionUseCase`에 명시적으로 전달한다. use case는 이 ID로 사용자 존재 여부와 캐릭터 접근 권한을 검사하고 `DebateSession.ownerId`를 설정한다.
+인증 적용 후 `ownerId`는 request body에서 받지 않는다. Spring Security가 검증한 access token의 `sub` claim을 web 계층에서 `authenticatedUserId`로 변환해 `CreateDebateSessionUseCase`에 명시적으로 전달한다. use case는 이 ID로 사용자 존재 여부와 캐릭터 접근 권한을 검사하고 `DebateSession.ownerId`를 설정한다.
 
-`@RequestBody`는 클라이언트 JSON을 DTO로 변환하고, 인증 principal은 Spring Security filter chain이 `Authorization` header의 JWT를 검증한 뒤 별도로 제공한다. body의 사용자 ID와 JWT 사용자는 자동으로 일치 검증되지 않으므로 JWT 전환 후 protected API request DTO에 `ownerId`를 두지 않는다.
+`@RequestBody`는 클라이언트 JSON을 DTO로 변환하고, 인증 principal은 Spring Security filter chain이 `Authorization` header의 JWT를 검증한 뒤 별도로 제공한다. body의 사용자 ID와 JWT 사용자는 자동으로 일치 검증되지 않으므로 protected API request DTO에 `ownerId`를 두지 않는다.
 
 Response:
 
@@ -1270,8 +1318,7 @@ MVP에서는 동기 생성이면 바로 `COMPLETED`로 저장해도 된다.
 - 캐릭터 이름은 필수다.
 - 캐릭터 이름은 1자 이상 50자 이하로 제한한다.
 - description은 1000자 이하로 제한한다.
-- personality와 speechStyle은 MVP 목표 명세에서는 JSON 문자열로 저장한다.
-- 현재 `Character` 구현은 speechStyle만 저장하므로, personality 저장은 추가 구현이 필요하다.
+- personality와 speechStyle은 JSON 문자열로 저장한다.
 - ownerId는 필수다.
 
 ### 19.3 DebateParticipant 규칙
@@ -1310,6 +1357,11 @@ MVP에서는 동기 생성이면 바로 `COMPLETED`로 저장해도 된다.
 
 ```text
 USER_NOT_FOUND
+EMAIL_ALREADY_EXISTS
+INVALID_CREDENTIALS
+INVALID_TOKEN
+REFRESH_TOKEN_REUSED
+UNAUTHORIZED
 CHARACTER_NOT_FOUND
 DEBATE_SESSION_NOT_FOUND
 DEBATE_PARTICIPANT_NOT_FOUND

@@ -16,9 +16,10 @@ public class UserJpaEntity {
     protected UserJpaEntity() {
     }
 
-    UserJpaEntity(Long id, String email, String nickname, LocalDateTime createdAt) {
+    UserJpaEntity(Long id, String email, String passwordHash, String nickname, LocalDateTime createdAt) {
         this.id = id;
         this.email = email;
+        this.passwordHash = passwordHash;
         this.nickname = nickname;
         this.createdAt = createdAt;
     }
@@ -35,6 +36,10 @@ public class UserJpaEntity {
         return nickname;
     }
 
+    String passwordHash() {
+        return passwordHash;
+    }
+
     LocalDateTime createdAt() {
         return createdAt;
     }
@@ -45,6 +50,10 @@ public class UserJpaEntity {
 
     @Column(nullable = false, unique = true)
     private String email;
+
+    @Column(name = "password_hash", nullable = false,
+            columnDefinition = "TEXT NOT NULL DEFAULT ''")
+    private String passwordHash;
 
     @Column(nullable = false)
     private String nickname;

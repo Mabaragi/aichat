@@ -46,7 +46,7 @@ class CreateDebateSessionUseCaseTest {
                 () -> FIXED_TIME
         );
         userRepository.add(new User(
-                1L, "owner@example.com", "owner", FIXED_TIME));
+                1L, "owner@example.com", "{bcrypt}hash", "owner", FIXED_TIME));
     }
 
     @Test

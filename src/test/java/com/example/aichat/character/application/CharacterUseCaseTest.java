@@ -4,6 +4,9 @@ import com.example.aichat.character.domain.Personality;
 import com.example.aichat.character.domain.SpeechStyle;
 import com.example.aichat.character.infrastructure.InMemoryCharacterRepository;
 import com.example.aichat.common.time.TimeProvider;
+import com.example.aichat.common.security.RequestActor;
+import com.example.aichat.common.exception.BusinessException;
+import com.example.aichat.common.exception.ErrorCode;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -74,5 +77,59 @@ class CharacterUseCaseTest {
 
         assertThatThrownBy(() -> getCharacterUseCase.execute(created.id()))
                 .isInstanceOf(com.example.aichat.common.exception.BusinessException.class);
+    }
+
+    @Test
+    void anonymousCanReadOnlyPublicCharacters() {
+        CharacterView privateCharacter = create("private", "PRIVATE");
+        CharacterView publicCharacter = create("public", "PUBLIC");
+
+        assertThatThrownBy(() -> getCharacterUseCase.execute(
+                RequestActor.anonymous(), privateCharacter.id()))
+                .isInstanceOfSatisfying(BusinessException.class, exception ->
+                        assertThat(exception.getCode()).isEqualTo(ErrorCode.CHARACTER_NOT_FOUND));
+
+        assertThat(getCharacterUseCase.execute(
+                RequestActor.anonymous(), publicCharacter.id()).id())
+                .isEqualTo(publicCharacter.id());
+        assertThat(listCharactersUseCase.execute(RequestActor.anonymous(), 1L).items())
+                .extracting(CharacterView::id)
+                .containsExactly(publicCharacter.id());
+    }
+
+    @Test
+    void otherUserCannotReadUpdateOrDeletePrivateCharacter() {
+        CharacterView privateCharacter = create("private", "PRIVATE");
+        RequestActor otherUser = RequestActor.authenticated(2L);
+
+        assertNotFound(() -> getCharacterUseCase.execute(otherUser, privateCharacter.id()));
+        assertNotFound(() -> updateCharacterUseCase.execute(new UpdateCharacterCommand(
+                otherUser,
+                privateCharacter.id(),
+                "changed",
+                null,
+                null,
+                null,
+                null
+        )));
+        assertNotFound(() -> deleteCharacterUseCase.execute(otherUser, privateCharacter.id()));
+    }
+
+    private CharacterView create(String name, String visibility) {
+        return createCharacterUseCase.execute(new CreateCharacterCommand(
+                1L,
+                name,
+                null,
+                null,
+                null,
+                visibility
+        ));
+    }
+
+    private static void assertNotFound(
+            org.assertj.core.api.ThrowableAssert.ThrowingCallable call) {
+        assertThatThrownBy(call)
+                .isInstanceOfSatisfying(BusinessException.class, exception ->
+                        assertThat(exception.getCode()).isEqualTo(ErrorCode.CHARACTER_NOT_FOUND));
     }
 }

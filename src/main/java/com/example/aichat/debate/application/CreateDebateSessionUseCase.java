@@ -37,7 +37,12 @@ public class CreateDebateSessionUseCase {
 
     @Transactional
     public DebateSessionView execute(CreateDebateSessionCommand command) {
-
+        if (!command.actor().canManage(command.ownerId())) {
+            throw new BusinessException(
+                    ErrorCode.USER_NOT_FOUND,
+                    "User not found: " + command.ownerId()
+            );
+        }
         requireUser(command.ownerId());
         List<DebateParticipant> participants = createParticipants(command);
 

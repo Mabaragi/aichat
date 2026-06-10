@@ -10,6 +10,8 @@ import com.example.aichat.character.application.UpdateCharacterCommand;
 import com.example.aichat.character.application.UpdateCharacterUseCase;
 import com.example.aichat.character.domain.Personality;
 import com.example.aichat.character.domain.SpeechStyle;
+import com.example.aichat.common.security.RequestActor;
+import com.example.aichat.common.security.WebActor;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -22,6 +24,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.security.core.Authentication;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 
@@ -53,19 +56,25 @@ public class CharacterController {
     }
 
     @PostMapping
-    public ResponseEntity<CharacterResponse> create(@Valid @RequestBody CreateCharacterRequest request) {
-        CharacterView created = createCharacterUseCase.execute(toCreateCommand(request));
+    public ResponseEntity<CharacterResponse> create(
+            Authentication authentication,
+            @Valid @RequestBody CreateCharacterRequest request) {
+        RequestActor actor = WebActor.from(authentication);
+        CharacterView created = createCharacterUseCase.execute(toCreateCommand(actor, request));
         return ResponseEntity.status(HttpStatus.CREATED).body(toResponse(created));
     }
 
     @GetMapping("/{characterId}")
-    public CharacterResponse get(@PathVariable Long characterId) {
-        return toResponse(getCharacterUseCase.execute(characterId));
+    public CharacterResponse get(Authentication authentication,
+                                 @PathVariable Long characterId) {
+        return toResponse(getCharacterUseCase.execute(
+                WebActor.from(authentication), characterId));
     }
 
     @GetMapping
-    public List<CharacterResponse> list(@RequestParam Long ownerId) {
-        return listCharactersUseCase.execute(ownerId)
+    public List<CharacterResponse> list(Authentication authentication,
+                                        @RequestParam Long ownerId) {
+        return listCharactersUseCase.execute(WebActor.from(authentication), ownerId)
                 .items()
                 .stream()
                 .map(this::toResponse)
@@ -73,21 +82,26 @@ public class CharacterController {
     }
 
     @PatchMapping("/{characterId}")
-    public CharacterResponse update(@PathVariable Long characterId,
+    public CharacterResponse update(Authentication authentication,
+                                    @PathVariable Long characterId,
                                     @Valid @RequestBody UpdateCharacterRequest request) {
-        CharacterView updated = updateCharacterUseCase.execute(toUpdateCommand(characterId, request));
+        CharacterView updated = updateCharacterUseCase.execute(
+                toUpdateCommand(WebActor.from(authentication), characterId, request));
         return toResponse(updated);
     }
 
     @DeleteMapping("/{characterId}")
-    public ResponseEntity<Void> delete(@PathVariable Long characterId) {
-        deleteCharacterUseCase.execute(characterId);
+    public ResponseEntity<Void> delete(Authentication authentication,
+                                       @PathVariable Long characterId) {
+        deleteCharacterUseCase.execute(WebActor.from(authentication), characterId);
         return ResponseEntity.noContent().build();
     }
 
-    private CreateCharacterCommand toCreateCommand(CreateCharacterRequest request) {
+    private CreateCharacterCommand toCreateCommand(RequestActor actor,
+                                                   CreateCharacterRequest request) {
         return new CreateCharacterCommand(
-                request.ownerId(),
+                actor,
+                actor.userId(),
                 request.name(),
                 request.description(),
                 toPersonality(request.personality()),
@@ -96,8 +110,10 @@ public class CharacterController {
         );
     }
 
-    private UpdateCharacterCommand toUpdateCommand(Long characterId, UpdateCharacterRequest request) {
+    private UpdateCharacterCommand toUpdateCommand(RequestActor actor, Long characterId,
+                                                   UpdateCharacterRequest request) {
         return new UpdateCharacterCommand(
+                actor,
                 characterId,
                 request.name(),
                 request.description(),

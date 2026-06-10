@@ -10,6 +10,7 @@
 - Spring Boot 4.0.6
 - Spring Web MVC
 - Spring Data JPA
+- Spring Security OAuth2 Resource Server / JOSE
 - SQLite (`jdbc:sqlite:./data/ai-debate.db`)
 - SpringDoc OpenAPI
 - Lombok
@@ -29,11 +30,12 @@
 기준 package는 `com.example.aichat`다.
 
 - `character`: AI 캐릭터 생성, 수정, 조회, 삭제.
+- `auth`: 이메일/비밀번호 회원가입, JWT 발급·검증, Refresh token rotation.
 - `debate`: 토론 세션, 참가자, 턴 생성, 재생성, 목록/상세 조회, 완료.
 - `generation`: 여러 비즈니스 도메인이 재사용하는 provider-neutral 텍스트 생성 capability. `application`에 생성 계약을 두고 `infrastructure`에 provider adapter를 둔다.
 - `share`: 생성된 토론 콘텐츠의 공유 링크 생성, 조회, 삭제.
-- `user`: MVP 사용자 생성과 조회.
-- `common`: 공통 exception, error response, time abstraction.
+- `user`: 사용자 credential 저장과 현재 사용자 조회.
+- `common`: 공통 exception, error response, time abstraction, request actor.
 
 각 도메인은 기본적으로 다음 계층을 따른다.
 
@@ -46,10 +48,15 @@
 
 `CreateDebateSessionUseCase`는 application 계층에서 `CharacterRepository`를 조회하지만 `debate.domain`은 `Character` 타입을 참조하지 않는다. `DebateParticipant`는 세션 생성 시점의 캐릭터 정보 스냅샷을 보관하고 `DebateSession` aggregate가 persistence를 소유한다.
 
+HTTP 인증은 `auth.infrastructure.SecurityConfig`가 담당한다. web 계층은 JWT principal을
+`RequestActor`로 변환하고 application 계층이 소유권을 검사한다. CLI는
+`RequestActor.system()`을 사용하는 신뢰된 로컬 adapter다.
+
 ## Current Notes
 
 - `Character` 타입명은 `java.lang.Character`와 겹친다. 다른 package에서 사용할 때 import 충돌을 주의한다.
 - `ai_debate_platform_mvp_spec.md`는 제품/기능 기준 명세다. 구현 흐름 문서는 `docs/development`에 둔다.
+- 웹 애플리케이션 실행에는 Base64 인코딩된 32바이트 이상의 `JWT_SECRET`이 필요하다.
 - 새 도메인 가이드는 `docs/agent-vault/guides`에 두되, 사람이 읽는 상세 구현 흐름이면 `docs/development`에 둔다.
 
 ## Useful Commands

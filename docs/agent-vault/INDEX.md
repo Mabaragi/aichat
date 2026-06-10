@@ -6,6 +6,7 @@
 
 - `guides/project-map.md`: 프로젝트 목적, 기술 스택, 주요 패키지 경계, 현재 구현 상태를 요약한다. 새 기능을 추가하거나 낯선 도메인을 건드릴 때 읽는다.
 - `guides/character-cli.md`: `character` CLI 명령 계약, 입력/출력, exit code, 예제를 정리한다. CLI를 직접 호출하는 에이전트 작업 전에 읽는다.
+- `guides/authentication.md`: JWT 수명, refresh rotation, 공개 API, actor/인가 경계를 정리한다. 인증 설정이나 protected API를 변경할 때 읽는다.
 - `../../development/backend-tdd-guideline.md`: 백엔드 작업에서 TDD를 우선 적용하는 기준과 계층별 테스트 우선순위를 설명한다. 백엔드 기능, 버그 수정, 도메인 규칙을 구현할 때 읽는다.
 - `../../development/character-domain-flow.md`: `character` 도메인의 MVP 구현 순서와 완료 기준을 설명한다. 캐릭터 도메인을 확장할 때 읽는다.
 

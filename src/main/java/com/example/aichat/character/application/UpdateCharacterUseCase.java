@@ -26,6 +26,13 @@ public class UpdateCharacterUseCase {
                         "Character not found: " + command.characterId()
                 ));
 
+        if (!command.actor().canManage(character.getOwnerId())) {
+            throw new BusinessException(
+                    ErrorCode.CHARACTER_NOT_FOUND,
+                    "Character not found: " + command.characterId()
+            );
+        }
+
         character.update(
                 command.name() != null ? command.name() : character.getName(),
                 command.description() != null ? command.description() : character.getDescription(),

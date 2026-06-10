@@ -15,6 +15,8 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.MediaType;
 import org.springframework.http.converter.json.JacksonJsonHttpMessageConverter;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.validation.beanvalidation.LocalValidatorFactoryBean;
@@ -22,6 +24,7 @@ import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.json.JsonMapper;
 
 import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -62,10 +65,10 @@ class DebateSessionControllerWebMvcTest {
         when(createDebateSessionUseCase.execute(any())).thenReturn(sampleView());
 
         mockMvc.perform(post("/api/debate-sessions")
+                        .principal(authentication())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
-                                  "ownerId": 1,
                                   "topic": {
                                     "title": "부먹 vs 찍먹",
                                     "description": "어느 방식이 더 나은가?",
@@ -100,6 +103,7 @@ class DebateSessionControllerWebMvcTest {
 
         CreateDebateSessionCommand command = captor.getValue();
         assertThat(command.ownerId()).isEqualTo(1L);
+        assertThat(command.actor().userId()).isEqualTo(1L);
         assertThat(command.topicTitle()).isEqualTo("부먹 vs 찍먹");
         assertThat(command.participants())
                 .extracting(participant -> participant.characterId())
@@ -112,10 +116,10 @@ class DebateSessionControllerWebMvcTest {
     @Test
     void rejectRequestWithoutExactlyTwoParticipants() throws Exception {
         mockMvc.perform(post("/api/debate-sessions")
+                        .principal(authentication())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
-                                  "ownerId": 1,
                                   "topic": {
                                     "title": "부먹 vs 찍먹",
                                     "description": "어느 방식이 더 나은가?",
@@ -170,5 +174,15 @@ class DebateSessionControllerWebMvcTest {
                 List.of(first, second),
                 LocalDateTime.of(2026, 6, 10, 12, 0)
         );
+    }
+
+    private static JwtAuthenticationToken authentication() {
+        Jwt jwt = Jwt.withTokenValue("token")
+                .header("alg", "HS256")
+                .subject("1")
+                .issuedAt(Instant.now())
+                .expiresAt(Instant.now().plusSeconds(60))
+                .build();
+        return new JwtAuthenticationToken(jwt);
     }
 }

@@ -4,9 +4,12 @@ import com.example.aichat.debate.application.CreateDebateParticipantCommand;
 import com.example.aichat.debate.application.CreateDebateSessionCommand;
 import com.example.aichat.debate.application.CreateDebateSessionUseCase;
 import com.example.aichat.debate.application.DebateSessionView;
+import com.example.aichat.common.security.RequestActor;
+import com.example.aichat.common.security.WebActor;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -28,15 +31,19 @@ public class DebateSessionController {
 
     @PostMapping
     public ResponseEntity<DebateSessionResponse> create(
+            Authentication authentication,
             @Valid @RequestBody CreateDebateSessionRequest request) {
-        DebateSessionView created = createDebateSessionUseCase.execute(toCommand(request));
+        DebateSessionView created = createDebateSessionUseCase.execute(
+                toCommand(WebActor.from(authentication), request));
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(DebateSessionResponse.from(created, objectMapper));
     }
 
-    private static CreateDebateSessionCommand toCommand(CreateDebateSessionRequest request) {
+    private static CreateDebateSessionCommand toCommand(
+            RequestActor actor, CreateDebateSessionRequest request) {
         return new CreateDebateSessionCommand(
-                request.ownerId(),
+                actor,
+                actor.userId(),
                 request.topic().title(),
                 request.topic().description(),
                 request.topic().category(),

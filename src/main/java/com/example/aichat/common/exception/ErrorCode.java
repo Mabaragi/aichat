@@ -1,6 +1,11 @@
 package com.example.aichat.common.exception;
 
 public enum ErrorCode {
+    EMAIL_ALREADY_EXISTS,
+    INVALID_CREDENTIALS,
+    INVALID_TOKEN,
+    REFRESH_TOKEN_REUSED,
+    UNAUTHORIZED,
     USER_NOT_FOUND,
     CHARACTER_NOT_FOUND,
     DEBATE_SESSION_NOT_FOUND,
