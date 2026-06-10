@@ -24,6 +24,9 @@ class DebateSessionTest {
         assertThat(session.getParticipants())
                 .extracting(DebateParticipant::getModel)
                 .containsExactly(ParticipantModel.FAST, ParticipantModel.QUALITY);
+        assertThat(session.getParticipants())
+                .extracting(DebateParticipant::getPosition)
+                .containsExactly(0, 1);
         assertThat(session.getCreatedAt()).isEqualTo(defaultNow());
     }
 
@@ -41,14 +44,27 @@ class DebateSessionTest {
     void rejectSessionWithMoreThanTwoParticipants() {
         DebateSessionFixture fixture = sessionFixture()
                 .participants(List.of(
-                        participant(ParticipantModel.FAST),
-                        participant(ParticipantModel.BALANCED),
-                        participant(ParticipantModel.QUALITY)
+                        participant(0, ParticipantModel.FAST),
+                        participant(1, ParticipantModel.BALANCED),
+                        participant(1, ParticipantModel.QUALITY)
                 ));
 
         assertThatThrownBy(fixture::create)
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessage("participants must be exactly 2");
+    }
+
+    @Test
+    void rejectParticipantsWithoutPositionsZeroAndOne() {
+        DebateSessionFixture fixture = sessionFixture()
+                .participants(List.of(
+                        participant(0, ParticipantModel.FAST),
+                        participant(0, ParticipantModel.QUALITY)
+                ));
+
+        assertThatThrownBy(fixture::create)
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("participant positions must be 0 and 1");
     }
 
     @Test
@@ -129,7 +145,20 @@ class DebateSessionTest {
     }
 
     private static DebateParticipant participant(ParticipantModel model) {
-        return new DebateParticipant(model);
+        return participant(model == ParticipantModel.FAST ? 0 : 1, model);
+    }
+
+    private static DebateParticipant participant(int position, ParticipantModel model) {
+        return new DebateParticipant(
+                null,
+                10L,
+                position,
+                model,
+                "캐릭터 " + position,
+                "설명",
+                "{\"rationality\":90}",
+                "{\"tone\":\"차분함\"}"
+        );
     }
 
     private static LocalDateTime defaultNow() {

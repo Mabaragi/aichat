@@ -18,6 +18,8 @@
 
 - `decisions/README.md`: decision note를 언제 쓰고 어떤 형식으로 남길지 설명한다. 구조적 판단이나 되돌리기 어려운 결정을 했을 때 읽는다.
 - `decisions/2026-06-09-generation-boundary.md`: 토론 프롬프트와 공용 텍스트 생성 capability의 책임 경계 및 의존 방향을 기록한다. prompt 또는 LLM provider 연동을 변경할 때 읽는다.
+- `decisions/2026-06-10-debate-character-snapshot.md`: Character 원본과 DebateParticipant snapshot의 경계, 접근 정책, aggregate 저장 방식을 기록한다. 토론 참가자 생성이나 캐릭터 연동을 변경할 때 읽는다.
+- `decisions/2026-06-10-authenticated-user-boundary.md`: JWT에서 얻은 인증 사용자 ID를 web 계층에서 application use case로 전달하는 경계를 기록한다. protected API의 `ownerId` 처리나 Spring Security 연결을 변경할 때 읽는다.
 
 ## Worklogs
 

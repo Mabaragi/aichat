@@ -21,6 +21,8 @@
 - datasource는 `src/main/resources/application.yaml`에서 설정한다.
 - 로컬 SQLite 파일은 `data/ai-debate.db`를 사용한다.
 - JPA `ddl-auto`는 현재 `update`다.
+- database integration test는 `test` profile과 `src/test/resources/application-test.yaml`을 사용한다.
+- 테스트 SQLite 파일은 `target/aichat-test.db`이며 로컬 개발 DB와 분리한다.
 
 ## Package Boundaries
 
@@ -41,6 +43,8 @@
 - `web`: controller, request DTO, response DTO.
 
 `generation`은 별도 비즈니스 도메인이 아니라 지원/platform 모듈이므로 `domain` 계층을 두지 않는다. 토론 프롬프트 정책은 `debate.domain.DebateTurnPromptBuilder`가 소유하고, `generation`은 `debate` 타입을 참조하지 않는다.
+
+`CreateDebateSessionUseCase`는 application 계층에서 `CharacterRepository`를 조회하지만 `debate.domain`은 `Character` 타입을 참조하지 않는다. `DebateParticipant`는 세션 생성 시점의 캐릭터 정보 스냅샷을 보관하고 `DebateSession` aggregate가 persistence를 소유한다.
 
 ## Current Notes
 

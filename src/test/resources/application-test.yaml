@@ -1,6 +1,6 @@
 spring:
   datasource:
-    url: jdbc:sqlite:file:./target/character-jpa-test.db?mode=rwc
+    url: jdbc:sqlite:file:./target/aichat-test.db?mode=rwc
     driver-class-name: org.sqlite.JDBC
 
   jpa:

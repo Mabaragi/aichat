@@ -9,13 +9,13 @@ public class DebateTurnPromptBuilder {
     public String buildDebateTurnPrompt(String topicTitle,
                                         String topicDescription,
                                         DebateFormat format,
-                                        ParticipantModel participantModel,
+                                        DebateParticipant participant,
                                         List<String> previousTurns,
                                         int maxTurnLength) {
         validateTopicTitle(topicTitle);
         validateTopicDescription(topicDescription);
         validateFormat(format);
-        validateParticipantModel(participantModel);
+        validateParticipant(participant);
         validateMaxTurnLength(maxTurnLength);
 
         return """
@@ -33,6 +33,12 @@ public class DebateTurnPromptBuilder {
                 [당신의 참가자 모델]
                 모델: %s
 
+                [캐릭터]
+                이름: %s
+                설명: %s
+                성격: %s
+                말투: %s
+
                 [이전 발화]
                 %s
 
@@ -46,7 +52,11 @@ public class DebateTurnPromptBuilder {
                         topicTitle.trim(),
                         topicDescription.trim(),
                         format.name(),
-                        participantModel.name(),
+                        participant.getModel().name(),
+                        participant.getName(),
+                        display(participant.getDescription()),
+                        display(participant.getPersonality()),
+                        display(participant.getSpeechStyle()),
                         formatPreviousTurns(previousTurns),
                         maxTurnLength
                 );
@@ -70,9 +80,9 @@ public class DebateTurnPromptBuilder {
         }
     }
 
-    private static void validateParticipantModel(ParticipantModel participantModel) {
-        if (participantModel == null) {
-            throw new IllegalArgumentException("participantModel is required");
+    private static void validateParticipant(DebateParticipant participant) {
+        if (participant == null) {
+            throw new IllegalArgumentException("participant is required");
         }
     }
 
@@ -92,5 +102,9 @@ public class DebateTurnPromptBuilder {
                 .map(String::trim)
                 .filter(turn -> !turn.isEmpty())
                 .collect(Collectors.joining("\n"));
+    }
+
+    private static String display(String value) {
+        return value == null || value.isBlank() ? "미설정" : value;
     }
 }

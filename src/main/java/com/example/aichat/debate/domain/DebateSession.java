@@ -3,6 +3,7 @@ package com.example.aichat.debate.domain;
 import lombok.Getter;
 
 import java.time.LocalDateTime;
+import java.util.Comparator;
 import java.util.List;
 
 @Getter
@@ -54,7 +55,9 @@ public class DebateSession {
         this.maxRounds = maxRounds;
         this.currentRound = currentRound;
         this.maxTurnLength = maxTurnLength;
-        this.participants = List.copyOf(participants);
+        this.participants = participants.stream()
+                .sorted(Comparator.comparingInt(DebateParticipant::getPosition))
+                .toList();
         this.createdAt = createdAt;
         this.startedAt = startedAt;
         this.endedAt = endedAt;
@@ -176,6 +179,15 @@ public class DebateSession {
 
         if (participants.size() != REQUIRED_PARTICIPANT_COUNT) {
             throw new IllegalArgumentException("participants must be exactly 2");
+        }
+
+        List<Integer> positions = participants.stream()
+                .map(DebateParticipant::getPosition)
+                .sorted()
+                .toList();
+
+        if (!positions.equals(List.of(0, 1))) {
+            throw new IllegalArgumentException("participant positions must be 0 and 1");
         }
     }
 

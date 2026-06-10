@@ -1,6 +1,7 @@
 # Learnings Index
 
 - `topics/java-records-value-objects.md`: Java `record`를 DTO, command, view, value object에 쓰는 이유와 `of` factory의 의미를 정리한다.
+- `topics/spring-security-authenticated-user.md`: Spring Security filter chain, `@RequestBody`, `@AuthenticationPrincipal`의 처리 경로와 JWT `sub`를 use case로 전달하는 이유를 설명한다.
 
 ```md
 - `notes/YYYY-MM-DD-short-title.md`: <무엇을 배웠는지 한 줄 요약>.

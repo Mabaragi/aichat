@@ -108,6 +108,7 @@ User
  ├─ Character
  └─ DebateSession
      ├─ DebateParticipant
+     │   ├─ Character Snapshot
      │   └─ ParticipantModel
      └─ DebateTurn
          └─ DebateParticipant
@@ -160,27 +161,18 @@ MVP의 핵심 Aggregate Root다.
 
 ### 7.4 DebateParticipant
 
-특정 토론 세션 안에서 발화 생성에 사용할 참가자 모델을 나타낸다.
+특정 토론 세션 안에서 발화할 캐릭터와 생성 모델을 나타낸다.
 
-현재 MVP 구현 기준으로 `DebateParticipant`는 `Character`와 직접 연결하지 않는다. 참가자는 캐릭터/입장/표시 이름이 아니라 어떤 생성 모델을 사용할지 결정하는 `ParticipantModel`을 가진다.
+`DebateParticipant`는 `Character` aggregate를 직접 참조하지 않고, 세션 생성 시점의 캐릭터 정보를 스냅샷으로 보관한다. `sourceCharacterId`는 원본 추적용 식별자이며, 이름, 설명, 성격, 말투는 토론 참가자 안에 복사한다.
 
-이유:
+이 구조를 사용하는 이유:
 
-- 같은 토론 안에서 서로 다른 생성 모델을 비교할 수 있다.
-- 실제 LLM 연동 전에는 `MOCK` 참가자로 도메인 흐름을 검증할 수 있다.
-- 이후 캐릭터 기반 참가자를 다시 도입하더라도 모델 선택과 캐릭터 설정을 분리할 수 있다.
+- 원본 캐릭터가 수정되거나 삭제돼도 기존 토론의 참가자 설정이 변하지 않는다.
+- `debate.domain`이 `character.domain.Character` 타입에 의존하지 않는다.
+- 같은 캐릭터를 서로 다른 `ParticipantModel`로 두 번 선택할 수 있다.
+- 세션 요청 배열 순서를 `position`으로 고정해 발화 순서를 안정적으로 보존한다.
 
-예시:
-
-```text
-Session A:
-- DebateParticipant: MOCK
-- DebateParticipant: FAST
-
-Session B:
-- DebateParticipant: BALANCED
-- DebateParticipant: QUALITY
-```
+`CreateDebateSessionUseCase`는 application 계층에서 `CharacterRepository`를 조회하고 접근 권한을 확인한 뒤 `DebateParticipant` 스냅샷을 생성한다.
 
 ### 7.5 DebateTurn
 
@@ -315,7 +307,14 @@ public enum DebateFormat {
 
 | 필드 | 타입 | 설명 |
 |---|---|---|
+| id | Long | 토론 참가자 ID |
+| sourceCharacterId | Long | 원본 캐릭터 추적용 ID |
+| position | Integer | 세션 안의 발화 순서, 0 또는 1 |
 | model | ParticipantModel | 참가자가 발화 생성에 사용할 모델 선택 |
+| name | String | 생성 시점 캐릭터 이름 |
+| description | String | 생성 시점 캐릭터 설명 |
+| personality | String 또는 JSON | 생성 시점 성격 설정 |
+| speechStyle | String 또는 JSON | 생성 시점 말투 설정 |
 
 ### ParticipantModel
 
@@ -428,7 +427,7 @@ CREATE TABLE characters (
 );
 
 CREATE TABLE debate_sessions (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    id INTEGER PRIMARY KEY,
     owner_id INTEGER NOT NULL,
     topic_title TEXT NOT NULL,
     topic_description TEXT,
@@ -447,9 +446,15 @@ CREATE TABLE debate_sessions (
 CREATE TABLE debate_participants (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     session_id INTEGER NOT NULL,
+    source_character_id INTEGER NOT NULL,
+    position INTEGER NOT NULL,
     model TEXT NOT NULL,
-    created_at TEXT NOT NULL,
-    FOREIGN KEY (session_id) REFERENCES debate_sessions(id)
+    name TEXT NOT NULL,
+    description TEXT,
+    personality TEXT,
+    speech_style TEXT,
+    FOREIGN KEY (session_id) REFERENCES debate_sessions(id),
+    UNIQUE (session_id, position)
 );
 
 CREATE TABLE debate_turns (
@@ -494,24 +499,24 @@ CREATE TABLE shared_contents (
 );
 ```
 
-MVP에서는 JPA `ddl-auto=update`로 시작해도 된다.  
+MVP에서는 JPA `ddl-auto=update`로 시작해도 된다.
 다만 기능이 안정되면 Flyway를 도입하는 것이 좋다.
 
 ---
 
 ## 10. 현재 저장소 구현 상태
 
-이 문서는 MVP 목표 명세와 구현 방향을 함께 기록한다. 현재 저장소는 전체 MVP가 완성된 상태가 아니라, Maven 기반 Spring Boot 프로젝트와 패키지/클래스 스캐폴딩이 먼저 잡힌 상태다.
+이 문서는 MVP 목표 명세와 구현 방향을 함께 기록한다. 현재 저장소는 전체 MVP가 완성된 상태는 아니지만 User, Character와 토론 세션 생성 vertical slice는 실제 동작한다.
 
 - 빌드 도구는 Maven이며, 루트에 `pom.xml`, `mvnw`, `mvnw.cmd`가 있다.
 - 기준 패키지는 `com.example.aichat`이다.
 - 설정 파일은 `src/main/resources/application.yaml`이며, SQLite 데이터베이스 `./data/ai-debate.db`를 사용한다.
-- `User`, `DebateSession`, `DebateParticipant`, `DebateTurn`, `SavedScene`, `SharedContent` 클래스는 존재하지만, 대부분 필드와 도메인 로직 구현 전 상태다.
-- `Character`는 일부 도메인 필드와 생성 팩토리가 구현되어 있다. 현재 코드 기준 필드는 `ownerId`, `name`, `description`, `speechStyle`, `visibility`, `createdAt`, `updatedAt` 중심이다.
-- `Character.create(...)`는 `personality` 인자를 받지만 현재 객체 필드로 저장하지 않는다. `personality`는 아래 명세의 목표 필드이며, 구현 시 저장 정책을 맞춰야 한다.
-- 컨트롤러는 `/api/users`, `/api/characters`, `/api/debate-sessions`, `/api/debate-sessions/{sessionId}/turns` 베이스 경로만 선언되어 있고, 실제 HTTP 메서드는 아직 구현 전이다.
+- `User` 생성과 JPA 저장, `Character` CRUD와 JPA 저장이 구현되어 있다.
+- `POST /api/debate-sessions`는 사용자와 캐릭터를 검증하고 캐릭터 스냅샷 기반 참가자 2명을 포함한 세션을 SQLite에 저장한다.
+- `DebateSession`은 participant를 소유하는 aggregate root이며 별도 `DebateParticipantRepository`를 두지 않는다.
+- `StartDebateSession`, turn 생성/조회, 세션 조회/완료와 share 기능은 아직 구현 전이다.
 - 토론 프롬프트 정책은 `debate.domain.DebateTurnPromptBuilder`가 담당한다. 공용 생성 계약은 `generation.application`의 `TextGenerator`, `GenerationRequest`, `GenerationResult`로 구성되고, `generation.infrastructure.MockTextGenerator`가 deterministic mock 응답을 제공한다.
-- 주요 유스케이스, Request DTO, Response DTO도 이름과 위치는 잡혀 있으나 대부분 스텁 상태다.
+- SQLite MVP에서는 `debate_sessions.id`를 persistence adapter가 현재 최대값 이후로 할당한다. 단일 애플리케이션 인스턴스를 전제로 JVM 내 할당을 직렬화한다.
 
 ---
 
@@ -827,6 +832,7 @@ DELETE /api/characters/{characterId}
 
 ```http
 POST /api/debate-sessions
+Authorization: Bearer <access-token>
 ```
 
 Request:
@@ -844,14 +850,20 @@ Request:
   "maxTurnLength": 600,
   "participants": [
     {
+      "characterId": 10,
       "model": "FAST"
     },
     {
+      "characterId": 20,
       "model": "QUALITY"
     }
   ]
 }
 ```
+
+JWT 인증으로 전환한 후에는 `ownerId`를 request body에서 받지 않는다. Spring Security가 검증한 access token의 `sub` claim을 web 계층에서 `authenticatedUserId`로 변환해 `CreateDebateSessionUseCase`에 명시적으로 전달한다. use case는 이 ID로 사용자 존재 여부와 캐릭터 접근 권한을 검사하고 `DebateSession.ownerId`를 설정한다.
+
+`@RequestBody`는 클라이언트 JSON을 DTO로 변환하고, 인증 principal은 Spring Security filter chain이 `Authorization` header의 JWT를 검증한 뒤 별도로 제공한다. body의 사용자 ID와 JWT 사용자는 자동으로 일치 검증되지 않으므로 JWT 전환 후 protected API request DTO에 `ownerId`를 두지 않는다.
 
 Response:
 
@@ -867,10 +879,26 @@ Response:
   "participants": [
     {
       "id": 1,
+      "sourceCharacterId": 10,
+      "position": 0,
+      "name": "합리주의 미식가",
+      "description": "논리적이고 차분하게 음식 취향을 분석하는 캐릭터",
+      "personality": {
+        "rationality": 90
+      },
+      "speechStyle": {
+        "tone": "차분함"
+      },
       "model": "FAST"
     },
     {
       "id": 2,
+      "sourceCharacterId": 20,
+      "position": 1,
+      "name": "직관적인 미식가",
+      "description": null,
+      "personality": null,
+      "speechStyle": null,
       "model": "QUALITY"
     }
   ],
@@ -1076,6 +1104,7 @@ turnIndex가 10까지 생성되면 세션 완료
 - 토론 설명
 - 토론 형식
 - 참가자 모델
+- 참가자 이름, 설명, 성격, 말투 스냅샷
 - 이전 발화 목록
 - 이번 발화 목적
 - 최대 길이
@@ -1096,6 +1125,12 @@ turnIndex가 10까지 생성되면 세션 완료
 
 [당신의 참가자 모델]
 모델: {participantModel}
+
+[캐릭터]
+이름: {participantName}
+설명: {participantDescription}
+성격: {participantPersonality}
+말투: {participantSpeechStyle}
 
 [이전 발화]
 {previousTurns}
@@ -1149,7 +1184,6 @@ Mock Generator는 다음 목적을 가진다.
 ```text
 DebateTurnGenerationUseCase
  ├─ DebateSessionRepository
- ├─ DebateParticipantRepository
  ├─ DebateTurnRepository
  ├─ DebateTurnPromptBuilder
  └─ TextGenerator
@@ -1244,7 +1278,12 @@ MVP에서는 동기 생성이면 바로 `COMPLETED`로 저장해도 된다.
 
 - model은 필수다.
 - model은 `MOCK`, `FAST`, `BALANCED`, `QUALITY` 중 하나여야 한다.
+- sourceCharacterId와 name은 필수다.
+- position은 각각 0과 1이어야 한다.
 - MVP에서는 세션 생성 요청의 `participants` 배열 순서가 발화 순서를 결정한다.
+- 세션 소유자가 소유한 캐릭터 또는 `PUBLIC` 캐릭터만 참가자로 선택할 수 있다.
+- 같은 캐릭터를 두 참가자 위치에 중복 선택할 수 있다.
+- 참가자 생성 후 원본 캐릭터 변경은 저장된 스냅샷에 영향을 주지 않는다.
 
 ### 19.4 DebateTurn 규칙
 
@@ -1294,6 +1333,15 @@ SHARED_CONTENT_NOT_FOUND
 - RUNNING 상태의 세션만 발화를 생성할 수 있다.
 - maxRounds에 도달하면 세션은 완료된다.
 - 참가자가 2명이 아니면 세션 생성에 실패한다.
+- 참가자 position이 0과 1이 아니면 세션 생성에 실패한다.
+
+#### DebateSession 생성 유스케이스 테스트
+
+- 세션 소유자의 `PRIVATE` 캐릭터를 선택할 수 있다.
+- 다른 사용자의 `PUBLIC` 캐릭터를 선택할 수 있다.
+- 다른 사용자의 `PRIVATE` 캐릭터와 존재하지 않는 캐릭터는 거부한다.
+- 같은 캐릭터를 서로 다른 모델로 두 번 선택할 수 있다.
+- 원본 캐릭터가 변경돼도 참가자 스냅샷은 유지된다.
 
 #### DebateTurn 생성 유스케이스 테스트
 

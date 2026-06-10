@@ -56,6 +56,15 @@
 - update persistence
 - test profile datasource 설정
 
+#### Database Test Isolation
+
+- 데이터베이스에 연결하는 Spring test는 반드시 `test` profile을 활성화한다.
+- JPA slice test와 `@SpringBootTest`는 `@ActiveProfiles("test")`를 사용한다.
+- 애플리케이션을 직접 시작하는 테스트는 `--spring.profiles.active=test`를 전달한다.
+- 테스트 datasource는 `src/test/resources/application-test.yaml`의 `jdbc:sqlite:file:./target/aichat-test.db?mode=rwc`를 사용한다.
+- 테스트에서 기본 datasource인 `jdbc:sqlite:./data/ai-debate.db`를 열어 로컬 개발 데이터를 생성하거나 변경하면 안 된다.
+- 새 database integration test를 추가할 때 active profile과 실제 JDBC URL을 함께 확인한다.
+
 ### Web
 
 Controller는 request/response 경계를 검증한다. 비즈니스 규칙 자체는 domain/application test에서 먼저 검증하고, controller test는 HTTP contract에 집중한다.
