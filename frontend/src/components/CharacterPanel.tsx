@@ -18,7 +18,7 @@ export function CharacterPanel({
   onCreated,
   onLogout,
 }: CharacterPanelProps) {
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(characters.length === 0);
   const [error, setError] = useState<string>();
   const [isPending, startTransition] = useTransition();
 
@@ -54,53 +54,50 @@ export function CharacterPanel({
       return;
     }
 
-    startTransition(async () => {
-      setError(undefined);
-      try {
-        const response = await bffFetch("/api/characters", {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify(payload),
-        });
-        const character = await readJson<Character>(response);
-        form.reset();
-        setExpanded(false);
-        onCreated(character);
-      } catch (caught) {
-        setError(
-          caught instanceof ApiError
-            ? caught.message
-            : "캐릭터를 만들지 못했습니다.",
-        );
-      }
+    startTransition(() => {
+      void createCharacter(form, payload);
     });
   }
 
+  async function createCharacter(form: HTMLFormElement, payload: CharacterCreate) {
+    setError(undefined);
+    try {
+      const response = await bffFetch("/api/characters", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const character = await readJson<Character>(response);
+      form.reset();
+      setExpanded(false);
+      onCreated(character);
+    } catch (caught) {
+      setError(
+        caught instanceof ApiError
+          ? caught.message
+          : "캐릭터를 만들지 못했습니다.",
+      );
+    }
+  }
+
   return (
-    <aside className="context-panel">
-      <header className="profile-header">
+    <section className="creator-panel">
+      <header className="creator-header">
         <div>
-          <p className="eyebrow">MY WORKSPACE</p>
-          <h2>{user.nickname ?? "토론가"}</h2>
+          <p className="eyebrow">MY CHARACTERS</p>
+          <h3>{user.nickname ?? "토론가"}의 캐릭터</h3>
           <p>{user.email}</p>
         </div>
-        <button className="text-button" type="button" onClick={onLogout}>
+        <button className="ghost-button" type="button" onClick={onLogout}>
           로그아웃
         </button>
       </header>
 
-      <div className="section-heading">
-        <div>
-          <p className="eyebrow">CHARACTERS</p>
-          <h3>내 캐릭터</h3>
-        </div>
-        <span>{characters.length.toString().padStart(2, "0")}</span>
-      </div>
-
-      <div className="character-list" aria-live="polite">
+      <div className="character-stack" aria-live="polite">
         {characters.length === 0 ? (
           <p className="empty-copy">
-            아직 캐릭터가 없습니다. 첫 번째 관점을 만들어 주세요.
+            아직 캐릭터가 없습니다. 첫 번째 토론자를 만들면 바로 세션을 열 수
+            있습니다.
           </p>
         ) : (
           characters.map((character, index) => (
@@ -108,7 +105,7 @@ export function CharacterPanel({
               <span>{String(index + 1).padStart(2, "0")}</span>
               <div>
                 <h4>{character.name ?? "이름 없음"}</h4>
-                <p>{character.description || "설명 미설정"}</p>
+                <p>{character.description || "설명 없음"}</p>
               </div>
               <small>{character.visibility === "PUBLIC" ? "공개" : "비공개"}</small>
             </article>
@@ -117,7 +114,7 @@ export function CharacterPanel({
       </div>
 
       <button
-        className="outline-button"
+        className="secondary-button wide"
         type="button"
         aria-expanded={expanded}
         onClick={() => {
@@ -132,18 +129,28 @@ export function CharacterPanel({
         <form className="character-form field-reveal" onSubmit={handleSubmit}>
           <label>
             이름
-            <input name="name" maxLength={50} required />
+            <input
+              name="name"
+              maxLength={50}
+              placeholder="합리적 미식가"
+              required
+            />
           </label>
           <label>
             설명
-            <textarea name="description" maxLength={1000} rows={3} />
+            <textarea
+              name="description"
+              maxLength={1000}
+              rows={3}
+              placeholder="근거를 차분하게 정리하는 토론자"
+            />
           </label>
           <label>
             성격 JSON
             <textarea
               name="personality"
               rows={3}
-              defaultValue={'{"rationality": 80}'}
+              defaultValue={'{"rationality": 80, "humor": 30}'}
               spellCheck={false}
             />
           </label>
@@ -152,7 +159,7 @@ export function CharacterPanel({
             <textarea
               name="speechStyle"
               rows={3}
-              defaultValue={'{"tone": "calm"}'}
+              defaultValue={'{"tone": "calm", "formality": "medium"}'}
               spellCheck={false}
             />
           </label>
@@ -164,11 +171,11 @@ export function CharacterPanel({
             </select>
           </label>
           {error ? <p className="form-error">{error}</p> : null}
-          <button className="primary-button" type="submit" disabled={isPending}>
+          <button className="primary-button wide" type="submit" disabled={isPending}>
             {isPending ? "저장 중" : "캐릭터 저장"}
           </button>
         </form>
       ) : null}
-    </aside>
+    </section>
   );
 }

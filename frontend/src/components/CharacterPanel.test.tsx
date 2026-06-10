@@ -19,17 +19,17 @@ describe("CharacterPanel", () => {
       />,
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "새 캐릭터 만들기" }));
     fireEvent.change(screen.getByLabelText("이름"), {
-      target: { value: "테스터" },
+      target: { value: "테스트 토론가" },
     });
-    const personality = screen.getByLabelText("성격 JSON");
-    fireEvent.change(personality, { target: { value: "[]" } });
+    fireEvent.change(screen.getByLabelText("성격 JSON"), {
+      target: { value: "[]" },
+    });
     fireEvent.submit(
       screen.getByRole("button", { name: "캐릭터 저장" }).closest("form")!,
     );
 
-    expect(await screen.findByText("성격은 JSON object여야 합니다.")).toBeVisible();
+    expect(await screen.findByText("성격 항목은 JSON object여야 합니다.")).toBeVisible();
     expect(fetchMock).not.toHaveBeenCalled();
   });
 });

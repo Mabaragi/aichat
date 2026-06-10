@@ -12,7 +12,7 @@
 - JWT는 Route Handler가 HttpOnly cookie로만 관리하고 client component에 전달하지 않는다.
 - `BACKEND_BASE_URL`은 server-only 환경변수다. `NEXT_PUBLIC_` 접두사를 사용하지 않는다.
 - mutation Route Handler는 same-origin `Origin`을 검증한다.
-- beige palette와 white 외의 색상을 추가하지 않는다.
+- Visual system 색상은 `src/app/globals.css`의 CSS variable을 source of truth로 둔다.
 - OpenAPI에 없는 API 동작을 UI에서 추측해 구현하지 않는다.
 
 ## Verification

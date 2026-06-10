@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "@/app/globals.css";
 
 export const metadata: Metadata = {
-  title: "AI Debate Studio",
-  description: "캐릭터 기반 AI 토론 설계 workspace",
+  title: "AI Debate Arena",
+  description: "AI 캐릭터로 토론을 둘러보고 직접 만드는 플랫폼 홈",
 };
 
 export default function RootLayout({

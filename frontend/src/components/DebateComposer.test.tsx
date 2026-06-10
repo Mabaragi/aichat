@@ -6,7 +6,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 const character: Character = {
   id: 10,
   ownerId: 1,
-  name: "논리적인 미식가",
+  name: "합리적 미식가",
   description: "차분하게 근거를 설명한다.",
   visibility: "PRIVATE",
 };
@@ -28,7 +28,7 @@ describe("DebateComposer", () => {
             id: 1,
             sourceCharacterId: 10,
             position: 0,
-            name: "논리적인 미식가",
+            name: "합리적 미식가",
             model: "FAST",
             personality: { rationality: 80 },
           },
@@ -36,7 +36,7 @@ describe("DebateComposer", () => {
             id: 2,
             sourceCharacterId: 10,
             position: 1,
-            name: "논리적인 미식가",
+            name: "합리적 미식가",
             model: "QUALITY",
             speechStyle: { tone: "calm" },
           },
@@ -66,7 +66,7 @@ describe("DebateComposer", () => {
       ],
     });
     expect(await screen.findByText("SESSION CREATED")).toBeInTheDocument();
-    expect(screen.getByText("FAST · character #10")).toBeVisible();
-    expect(screen.getByText("QUALITY · character #10")).toBeVisible();
+    expect(screen.getByText("FAST / character #10")).toBeVisible();
+    expect(screen.getByText("QUALITY / character #10")).toBeVisible();
   });
 });

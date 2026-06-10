@@ -9,18 +9,18 @@ describe("parseOptionalJsonObject", () => {
     expect(parseOptionalJsonObject("  ", "말투")).toBeUndefined();
   });
 
-  it.each(["[]", "\"calm\"", "null", "1"])(
+  it.each(["[]", '"calm"', "null", "1"])(
     "rejects non-object JSON: %s",
     (value) => {
       expect(() => parseOptionalJsonObject(value, "말투")).toThrow(
-        "말투은 JSON object여야 합니다.",
+        "말투 항목은 JSON object여야 합니다.",
       );
     },
   );
 
   it("rejects malformed JSON before submission", () => {
     expect(() => parseOptionalJsonObject("{", "성격")).toThrow(
-      "성격은 올바른 JSON이어야 합니다.",
+      "성격 항목은 올바른 JSON이어야 합니다.",
     );
   });
 });

@@ -10,15 +10,11 @@ export function parseOptionalJsonObject(
   try {
     parsed = JSON.parse(value);
   } catch {
-    throw new Error(`${label}은 올바른 JSON이어야 합니다.`);
+    throw new Error(`${label} 항목은 올바른 JSON이어야 합니다.`);
   }
 
-  if (
-    parsed === null ||
-    Array.isArray(parsed) ||
-    typeof parsed !== "object"
-  ) {
-    throw new Error(`${label}은 JSON object여야 합니다.`);
+  if (parsed === null || Array.isArray(parsed) || typeof parsed !== "object") {
+    throw new Error(`${label} 항목은 JSON object여야 합니다.`);
   }
 
   return parsed as Record<string, unknown>;

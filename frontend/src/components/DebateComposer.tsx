@@ -1,10 +1,6 @@
 "use client";
 
-import type {
-  Character,
-  DebateCreate,
-  DebateSession,
-} from "@/lib/api-types";
+import type { Character, DebateCreate, DebateSession } from "@/lib/api-types";
 import { ApiError, bffFetch, readJson } from "@/lib/bff-fetch";
 import { FormEvent, useState, useTransition } from "react";
 
@@ -37,7 +33,7 @@ export function DebateComposer({ characters }: DebateComposerProps) {
     const data = new FormData(form);
 
     if (effectiveLeftId === undefined || effectiveRightId === undefined) {
-      setError("두 참가자를 모두 선택해 주세요.");
+      setError("참가 캐릭터를 먼저 만들어 주세요.");
       return;
     }
 
@@ -65,53 +61,53 @@ export function DebateComposer({ characters }: DebateComposerProps) {
     };
 
     if (!payload.topic.title || !payload.topic.description) {
-      setError("주제 제목과 설명을 입력해 주세요.");
+      setError("토론 제목과 설명을 입력해 주세요.");
       return;
     }
 
-    startTransition(async () => {
-      setError(undefined);
-      try {
-        const response = await bffFetch("/api/debate-sessions", {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify(payload),
-        });
-        setResult(await readJson<DebateSession>(response));
-      } catch (caught) {
-        setError(
-          caught instanceof ApiError
-            ? caught.message
-            : "토론 세션을 만들지 못했습니다.",
-        );
-      }
+    startTransition(() => {
+      void createDebate(payload);
     });
   }
 
+  async function createDebate(payload: DebateCreate) {
+    setError(undefined);
+    try {
+      const response = await bffFetch("/api/debate-sessions", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      setResult(await readJson<DebateSession>(response));
+    } catch (caught) {
+      setError(
+        caught instanceof ApiError
+          ? caught.message
+          : "토론 세션을 만들지 못했습니다.",
+      );
+    }
+  }
+
   return (
-    <section className="debate-stage">
-      <header className="stage-header">
+    <section className="creator-panel debate-creator">
+      <header className="creator-header">
         <div>
-          <p className="eyebrow">NEW DEBATE</p>
-          <h1>토론 설계</h1>
+          <p className="eyebrow">NEW MATCH</p>
+          <h3>토론 매치 만들기</h3>
+          <p>같은 캐릭터를 양쪽에 배치해 모델만 다르게 비교해도 됩니다.</p>
         </div>
-        <p>
-          두 캐릭터와 모델을 순서대로 배치합니다.
-          <br />
-          같은 캐릭터를 양쪽에 선택할 수 있습니다.
-        </p>
       </header>
 
       {characters.length === 0 ? (
         <div className="stage-empty">
           <span>01</span>
-          <h2>먼저 캐릭터를 만들어 주세요.</h2>
-          <p>왼쪽 패널에서 토론에 참여할 관점을 정의할 수 있습니다.</p>
+          <h4>먼저 캐릭터를 만들어 주세요.</h4>
+          <p>왼쪽 패널에서 캐릭터를 저장하면 이곳에서 바로 선택할 수 있습니다.</p>
         </div>
       ) : (
         <form className="debate-form" onSubmit={handleSubmit}>
           <fieldset className="topic-fields">
-            <legend>주제</legend>
+            <legend>토론 주제</legend>
             <label className="wide-field">
               제목
               <input
@@ -126,7 +122,7 @@ export function DebateComposer({ characters }: DebateComposerProps) {
               <textarea
                 name="description"
                 rows={3}
-                placeholder="어느 방식이 더 나은가?"
+                placeholder="어떤 기준으로 더 나은 선택인지 토론합니다."
                 required
               />
             </label>
@@ -164,7 +160,7 @@ export function DebateComposer({ characters }: DebateComposerProps) {
           </fieldset>
 
           <fieldset className="participant-fields">
-            <legend>참가자 순서</legend>
+            <legend>참가자와 모델</legend>
             <ParticipantSelect
               index={1}
               characterId={effectiveLeftId}
@@ -189,9 +185,8 @@ export function DebateComposer({ characters }: DebateComposerProps) {
           </fieldset>
 
           {error ? <p className="form-error stage-error">{error}</p> : null}
-          <button className="create-debate-button" type="submit" disabled={isPending}>
-            <span>{isPending ? "생성 중" : "토론 세션 생성"}</span>
-            <span aria-hidden="true">→</span>
+          <button className="primary-button wide" type="submit" disabled={isPending}>
+            {isPending ? "세션 생성 중" : "토론 세션 생성"}
           </button>
         </form>
       )}
@@ -225,7 +220,7 @@ function ParticipantSelect({
       <span className="participant-index">{String(index).padStart(2, "0")}</span>
       <div className="participant-name">
         <strong>{character?.name ?? "참가자 선택"}</strong>
-        <small>{character?.description || "설명 미설정"}</small>
+        <small>{character?.description || "설명 없음"}</small>
       </div>
       <label>
         캐릭터
@@ -261,7 +256,7 @@ function DebateResult({ result }: { result: DebateSession }) {
       <header>
         <div>
           <p className="eyebrow">SESSION CREATED</p>
-          <h2>{result.topicTitle}</h2>
+          <h3>{result.topicTitle}</h3>
         </div>
         <span>{result.status ?? "CREATED"}</span>
       </header>
@@ -273,7 +268,7 @@ function DebateResult({ result }: { result: DebateSession }) {
             <div>
               <strong>{participant.name}</strong>
               <small>
-                {participant.model} · character #{participant.sourceCharacterId}
+                {participant.model} / character #{participant.sourceCharacterId}
               </small>
             </div>
             <dl>
