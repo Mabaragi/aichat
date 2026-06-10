@@ -5,12 +5,10 @@ import com.example.aichat.common.exception.BusinessException;
 import com.example.aichat.common.exception.ErrorCode;
 import com.example.aichat.user.domain.User;
 import com.example.aichat.user.domain.UserRepository;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 @Service
-@ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
 public class CreateUserUseCase {
 
     private final UserRepository userRepository;

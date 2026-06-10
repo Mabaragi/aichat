@@ -57,3 +57,14 @@ variable "mount_path" {
   type    = string
   default = "/home/ubuntu/aichat/data"
 }
+
+variable "jwt_secret_parameter_name" {
+  type        = string
+  description = "SSM SecureString parameter name containing the production JWT secret"
+  default     = "/aichat/prod/jwt-secret"
+
+  validation {
+    condition     = startswith(var.jwt_secret_parameter_name, "/")
+    error_message = "jwt_secret_parameter_name must be an absolute SSM parameter name starting with /."
+  }
+}

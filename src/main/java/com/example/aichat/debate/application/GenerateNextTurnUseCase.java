@@ -1,5 +1,8 @@
 package com.example.aichat.debate.application;
 
+import org.springframework.stereotype.Component;
+
+@Component
 public class GenerateNextTurnUseCase {
 
     public int resolveSpeakerIndex(int turnIndex, int participantCount) {

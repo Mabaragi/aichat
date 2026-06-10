@@ -3,6 +3,10 @@ package com.example.aichat.cli;
 import com.example.aichat.character.application.CharacterView;
 import com.example.aichat.character.application.DeleteCharacterResult;
 import com.example.aichat.character.application.ListCharactersResult;
+import com.example.aichat.debate.application.DebateParticipantView;
+import com.example.aichat.debate.application.DebateSessionView;
+import com.example.aichat.cli.debate.DebateNextTurnResult;
+import com.example.aichat.user.application.UserView;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -60,6 +64,57 @@ public class CliPrinter {
                     "  visibility=" + character.visibility(),
                     "  createdAt=" + character.createdAt(),
                     "  updatedAt=" + character.updatedAt());
+        }
+
+        if (payload instanceof UserView user) {
+            return String.join(System.lineSeparator(),
+                    "user",
+                    "  id=" + user.id(),
+                    "  email=" + user.email(),
+                    "  nickname=" + user.nickname(),
+                    "  createdAt=" + user.createdAt());
+        }
+
+        if (payload instanceof DebateSessionView session) {
+            String lineSeparator = System.lineSeparator();
+            StringBuilder builder = new StringBuilder("debate-session")
+                    .append(lineSeparator).append("  id=").append(session.id())
+                    .append(lineSeparator).append("  ownerId=").append(session.ownerId())
+                    .append(lineSeparator).append("  topicTitle=").append(session.topicTitle())
+                    .append(lineSeparator).append("  topicDescription=")
+                    .append(valueOrNull(session.topicDescription()))
+                    .append(lineSeparator).append("  topicCategory=")
+                    .append(valueOrNull(session.topicCategory()))
+                    .append(lineSeparator).append("  status=").append(session.status())
+                    .append(lineSeparator).append("  format=").append(session.format())
+                    .append(lineSeparator).append("  maxRounds=").append(session.maxRounds())
+                    .append(lineSeparator).append("  currentRound=").append(session.currentRound())
+                    .append(lineSeparator).append("  maxTurnLength=").append(session.maxTurnLength())
+                    .append(lineSeparator).append("  createdAt=").append(session.createdAt())
+                    .append(lineSeparator).append("  participants=");
+
+            for (DebateParticipantView participant : session.participants()) {
+                builder.append(lineSeparator)
+                        .append("    - position=").append(participant.position())
+                        .append(", sourceCharacterId=").append(participant.sourceCharacterId())
+                        .append(", model=").append(participant.model())
+                        .append(", name=").append(participant.name())
+                        .append(", description=").append(valueOrNull(participant.description()))
+                        .append(", personality=").append(valueOrNull(participant.personality()))
+                        .append(", speechStyle=").append(valueOrNull(participant.speechStyle()));
+            }
+            return builder.toString();
+        }
+
+        if (payload instanceof DebateNextTurnResult nextTurn) {
+            return String.join(System.lineSeparator(),
+                    "debate-next-turn",
+                    "  turnIndex=" + nextTurn.turnIndex(),
+                    "  participantCount=" + nextTurn.participantCount(),
+                    "  maxRounds=" + nextTurn.maxRounds(),
+                    "  speakerIndex=" + nextTurn.speakerIndex(),
+                    "  round=" + nextTurn.round(),
+                    "  shouldCompleteSession=" + nextTurn.shouldCompleteSession());
         }
 
         if (payload instanceof ListCharactersResult list) {

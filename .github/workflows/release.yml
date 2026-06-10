@@ -65,12 +65,12 @@ jobs:
           BACKEND_CONFIG="${RUNNER_TEMP}/aichat-backend.hcl"
 
           cat >"${BACKEND_CONFIG}" <<EOF
-bucket = "${STATE_BUCKET}"
-key = "app/terraform.tfstate"
-region = "${AWS_REGION}"
-use_lockfile = true
-encrypt = true
-EOF
+          bucket = "${STATE_BUCKET}"
+          key = "app/terraform.tfstate"
+          region = "${AWS_REGION}"
+          use_lockfile = true
+          encrypt = true
+          EOF
 
           echo "ACCOUNT_ID=${ACCOUNT_ID}" >> "$GITHUB_ENV"
           echo "STATE_BUCKET=${STATE_BUCKET}" >> "$GITHUB_ENV"
@@ -86,6 +86,7 @@ EOF
           echo "ECR_REPOSITORY_URL=$(terraform -chdir=infra/app output -raw ecr_repository_url)" >> "$GITHUB_ENV"
           echo "EC2_INSTANCE_ID=$(terraform -chdir=infra/app output -raw ec2_instance_id)" >> "$GITHUB_ENV"
           echo "EC2_PUBLIC_IP=$(terraform -chdir=infra/app output -raw ec2_public_ip)" >> "$GITHUB_ENV"
+          echo "JWT_SECRET_PARAMETER_NAME=$(terraform -chdir=infra/app output -raw jwt_secret_parameter_name)" >> "$GITHUB_ENV"
 
       - name: Assume deploy role
         uses: aws-actions/configure-aws-credentials@v4
@@ -112,6 +113,7 @@ EOF
 
       - name: Send SSM deploy command
         run: |
+          trap 'rm -f ssm-parameters.json' EXIT
           python - <<'PY'
           import json
           import os
@@ -121,6 +123,7 @@ EOF
           image_uri = os.environ["IMAGE_URI"]
           ecr_registry = os.environ["ECR_REGISTRY"]
           app_port = os.environ["APP_PORT"]
+          jwt_secret_parameter_name = os.environ["JWT_SECRET_PARAMETER_NAME"]
           mount_path = "/home/ubuntu/aichat/data"
           output_path = Path("ssm-parameters.json")
 
@@ -128,16 +131,27 @@ EOF
               "cat >/tmp/aichat-deploy.sh <<'EOF'",
               "#!/usr/bin/env bash",
               "set -euo pipefail",
+              "cleanup() {",
+              "  unset JWT_SECRET || true",
+              "  rm -f /tmp/aichat-deploy.sh",
+              "}",
+              "trap cleanup EXIT",
               "",
               "AWS_REGION='__AWS_REGION__'",
               "ECR_REGISTRY='__ECR_REGISTRY__'",
               "IMAGE_URI='__IMAGE_URI__'",
               "APP_PORT='__APP_PORT__'",
+              "JWT_SECRET_PARAMETER_NAME='__JWT_SECRET_PARAMETER_NAME__'",
               "CONTAINER_NAME='aichat'",
               "MOUNT_PATH='__MOUNT_PATH__'",
               "",
               "aws --version",
               "docker version",
+              "JWT_SECRET=\"$(aws ssm get-parameter --region \"$AWS_REGION\" --name \"$JWT_SECRET_PARAMETER_NAME\" --with-decryption --query 'Parameter.Value' --output text)\"",
+              "if [ -z \"$JWT_SECRET\" ] || [ \"$JWT_SECRET\" = 'None' ]; then",
+              "  echo \"JWT secret parameter is missing or empty: $JWT_SECRET_PARAMETER_NAME\" >&2",
+              "  exit 1",
+              "fi",
               "aws ecr get-login-password --region \"$AWS_REGION\" | docker login --username AWS --password-stdin \"$ECR_REGISTRY\"",
               "docker rm -f \"$CONTAINER_NAME\" 2>/dev/null || true",
               "docker pull \"$IMAGE_URI\"",
@@ -146,8 +160,10 @@ EOF
               "  --restart unless-stopped \\",
               "  -p \"${APP_PORT}:8080\" \\",
               "  -v \"${MOUNT_PATH}:/app/data\" \\",
+              "  -e JWT_SECRET=\"$JWT_SECRET\" \\",
               "  -e JAVA_TOOL_OPTIONS=\"-Xms128m -Xmx512m -Duser.timezone=UTC\" \\",
               "  \"$IMAGE_URI\"",
+              "unset JWT_SECRET",
               "",
               "ready=0",
               "attempt=1",
@@ -178,6 +194,7 @@ EOF
               .replace("__ECR_REGISTRY__", ecr_registry)
               .replace("__IMAGE_URI__", image_uri)
               .replace("__APP_PORT__", app_port)
+              .replace("__JWT_SECRET_PARAMETER_NAME__", jwt_secret_parameter_name)
               .replace("__MOUNT_PATH__", mount_path)
           )
 

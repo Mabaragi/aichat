@@ -29,6 +29,9 @@ jobs:
         with:
           terraform_version: 1.15.5
 
+      - name: Verify release secret flow
+        run: python scripts/verify_release_secret_flow.py
+
       - name: Run Maven tests
         run: bash ./mvnw -ntp test
 

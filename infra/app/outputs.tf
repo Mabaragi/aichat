@@ -29,3 +29,7 @@ output "instance_profile_name" {
 output "ec2_role_arn" {
   value = aws_iam_role.ec2.arn
 }
+
+output "jwt_secret_parameter_name" {
+  value = var.jwt_secret_parameter_name
+}

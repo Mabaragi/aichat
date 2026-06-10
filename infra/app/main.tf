@@ -2,6 +2,10 @@ data "aws_vpc" "default" {
   default = true
 }
 
+data "aws_caller_identity" "current" {}
+
+data "aws_partition" "current" {}
+
 data "aws_subnets" "default" {
   filter {
     name   = "vpc-id"
@@ -53,6 +57,15 @@ data "aws_iam_policy_document" "ec2_assume_role" {
   }
 }
 
+data "aws_iam_policy_document" "ec2_jwt_secret_read" {
+  statement {
+    actions = ["ssm:GetParameter"]
+    resources = [
+      "arn:${data.aws_partition.current.partition}:ssm:${var.aws_region}:${data.aws_caller_identity.current.account_id}:parameter${var.jwt_secret_parameter_name}"
+    ]
+  }
+}
+
 resource "aws_ecr_repository" "app" {
   name                 = var.repository_name
   image_tag_mutability = "IMMUTABLE"
@@ -100,6 +113,12 @@ resource "aws_iam_role_policy_attachment" "ec2_ssm" {
 resource "aws_iam_role_policy_attachment" "ec2_ecr_read" {
   role       = aws_iam_role.ec2.name
   policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
+}
+
+resource "aws_iam_role_policy" "ec2_jwt_secret_read" {
+  name   = "${var.ec2_role_name}-jwt-secret-read"
+  role   = aws_iam_role.ec2.id
+  policy = data.aws_iam_policy_document.ec2_jwt_secret_read.json
 }
 
 resource "aws_iam_instance_profile" "ec2" {

@@ -1,5 +1,8 @@
 package com.example.aichat.common.exception;
 
+import io.swagger.v3.oas.annotations.media.Schema;
+
+@Schema(description = "Machine-readable application error code.")
 public enum ErrorCode {
     EMAIL_ALREADY_EXISTS,
     INVALID_CREDENTIALS,

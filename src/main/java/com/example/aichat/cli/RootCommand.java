@@ -13,7 +13,7 @@ import picocli.CommandLine.Model.CommandSpec;
         version = "0.0.1",
         description = {
                 "AI debate platform CLI.",
-                "Use character commands to manage AI characters directly from the terminal."
+                "Use character, user, and debate commands directly from the terminal."
         }
 )
 public class RootCommand implements Runnable {

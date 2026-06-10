@@ -538,6 +538,7 @@ MVP에서는 JPA `ddl-auto=update`로 시작해도 된다.
 - 토론 프롬프트 정책은 `debate.domain.DebateTurnPromptBuilder`가 담당한다. 공용 생성 계약은 `generation.application`의 `TextGenerator`, `GenerationRequest`, `GenerationResult`로 구성되고, `generation.infrastructure.MockTextGenerator`가 deterministic mock 응답을 제공한다.
 - `OpenAiTextGenerator`와 `GeminiTextGenerator` provider adapter 및 단위 테스트가 구현되어 있다. 아직 Spring bean 등록, provider 선택 설정, `GenerateNextTurnUseCase` orchestration 연결은 구현 전이다.
 - HTTP API는 Bearer JWT 인증을 사용하며 Character와 DebateSession 생성의 소유자는 access token의 `sub`에서 결정한다.
+- 운영 JWT 서명 키는 SSM SecureString `/aichat/prod/jwt-secret`에서 EC2 instance role이 조회해 container의 `JWT_SECRET` 환경변수로 주입한다. secret 값은 Terraform state나 GitHub Secrets에 저장하지 않으며, 테스트는 `application-test.yaml`의 고정 test secret을 사용한다.
 - SQLite MVP에서는 `debate_sessions.id`를 persistence adapter가 현재 최대값 이후로 할당한다. 단일 애플리케이션 인스턴스를 전제로 JVM 내 할당을 직렬화한다.
 
 ---

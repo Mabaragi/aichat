@@ -1,10 +1,10 @@
-# Character CLI Guide
+# Aichat CLI Guide
 
 ## Purpose
 
-`character` CLI는 REST API와 별개인 실행 진입점이다. 에이전트는 이 CLI를 통해 캐릭터를 생성, 조회, 목록 조회, 수정, 삭제할 수 있다.
+`aichat` CLI는 REST API와 별개인 실행 진입점이다. 에이전트는 이 CLI를 통해 캐릭터를 만들고, 사용자를 만들고, 토론 세션을 생성하고, 다음 턴 계산을 확인할 수 있다.
 
-CLI는 `com.example.aichat.character.application` use case만 호출한다. 비즈니스 규칙은 CLI에 두지 않는다.
+CLI는 `com.example.aichat.*.application` use case와 계산용 `debate` helper만 호출한다. 비즈니스 규칙은 CLI에 두지 않는다.
 
 ## Entry Point
 
@@ -81,6 +81,59 @@ aichat character delete 1
 - Positional arg:
   - `CHARACTER_ID`
 
+## User Commands
+
+### Create
+
+```powershell
+aichat user create --email user@example.com --password password123 --nickname "마바라기"
+```
+
+- Required:
+  - `--email`
+  - `--password`
+  - `--nickname`
+
+### Get
+
+```powershell
+aichat user get 1
+```
+
+- Positional arg:
+  - `USER_ID`
+
+## Debate Commands
+
+### Create
+
+```powershell
+aichat debate create --owner-id 1 --topic-title "부먹 vs 찍먹" --topic-description "어느 방식이 더 나은가?" --topic-category FOOD --format PROS_AND_CONS --max-rounds 5 --max-turn-length 600 --participant "{\"characterId\":10,\"model\":\"FAST\"}" --participant "{\"characterId\":20,\"model\":\"QUALITY\"}"
+```
+
+- Required:
+  - `--owner-id`
+  - `--topic-title`
+  - `--format`
+  - `--max-rounds`
+  - `--max-turn-length`
+  - `--participant` 2회
+- Optional:
+  - `--topic-description`
+  - `--topic-category`
+- `--participant`는 raw JSON 문자열이며 `characterId`와 `model`을 포함해야 한다.
+
+### Next Turn
+
+```powershell
+aichat debate next-turn --turn-index 3 --participant-count 2 --max-rounds 5
+```
+
+- Required:
+  - `--turn-index`
+  - `--participant-count`
+  - `--max-rounds`
+
 ## Output Shapes
 
 - Success responses are deterministic and use the same field order every time.
@@ -95,12 +148,13 @@ aichat character delete 1
 
 ## Error Handling
 
-- `CHARACTER_NOT_FOUND` is returned when a requested character does not exist.
+- `CHARACTER_NOT_FOUND`, `USER_NOT_FOUND`, and `DEBATE_SESSION_NOT_FOUND` are returned when a requested resource does not exist.
 - CLI input validation failures use `INVALID_ARGUMENT`.
-- Invalid JSON input for `--personality` or `--speech-style` is rejected before calling the use case.
+- Invalid JSON input for `--personality`, `--speech-style`, or `--participant` is rejected before calling the use case.
 
 ## Notes For Agents
 
 - Prefer `JSON` output unless you specifically need a human-readable trace.
-- Use `character list` before `character get` or `character update` when you do not already know the ID.
-- Keep `personality` and `speech-style` JSON small and valid; shell quoting is the common failure point.
+- Use `character list` before `character get` when you do not already know the ID.
+- Keep JSON options small and valid; shell quoting is the common failure point.
+- `debate create` requires exactly two participants, so provide the `--participant` option twice.

@@ -24,6 +24,7 @@
 - JPA `ddl-auto`는 현재 `update`다.
 - database integration test는 `test` profile과 `src/test/resources/application-test.yaml`을 사용한다.
 - 테스트 SQLite 파일은 `target/aichat-test.db`이며 로컬 개발 DB와 분리한다.
+- 로컬 웹 개발은 `dev` profile을 명시적으로 활성화하고 `src/main/resources/application-dev.yaml`의 비운영 JWT key를 사용한다.
 
 ## Package Boundaries
 
@@ -63,5 +64,5 @@ HTTP 인증은 `auth.infrastructure.SecurityConfig`가 담당한다. web 계층�
 
 ```powershell
 .\mvnw.cmd test
-.\mvnw.cmd spring-boot:run
+.\mvnw.cmd spring-boot:run -Dspring-boot.run.profiles=dev
 ```
