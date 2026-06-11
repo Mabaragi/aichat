@@ -26,7 +26,7 @@ describe("WorkspaceApp", () => {
     push.mockClear();
   });
 
-  it("shows the public catalog before authentication and routes creation CTA to login", async () => {
+  it("shows the search-first public catalog before authentication and routes creation CTA to login", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn((input: RequestInfo | URL) => {
@@ -97,10 +97,17 @@ describe("WorkspaceApp", () => {
 
     renderWorkspace();
 
+    expect(screen.getByRole("tab", { name: "공개 토론" })).toBeVisible();
+    expect(screen.getByLabelText("검색어")).toBeVisible();
     expect(await screen.findByText("부먹 vs 찍먹")).toBeVisible();
     expect(await screen.findByRole("button", { name: "음식" })).toBeVisible();
+    expect(await screen.findByLabelText("부먹 vs 찍먹 썸네일")).toBeVisible();
+    expect(await screen.findByText("합리적 미식가")).toBeVisible();
+    expect(
+      screen.queryByText("완료된 AI 토론과 공개 캐릭터를 바로 탐색합니다."),
+    ).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: "로그인하고 만들기" }));
+    fireEvent.click(screen.getByRole("button", { name: "만들기" }));
 
     expect(push).toHaveBeenCalledWith("/login");
   });

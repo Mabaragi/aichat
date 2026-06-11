@@ -23,7 +23,7 @@ describe("AuthPanel", () => {
       target: { value: "short" },
     });
     fireEvent.submit(
-      screen.getByRole("button", { name: "계정 만들기" }).closest("form")!,
+      screen.getByRole("button", { name: "가입" }).closest("form")!,
     );
 
     expect(await screen.findByText("비밀번호는 8자 이상이어야 합니다.")).toBeVisible();

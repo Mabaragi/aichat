@@ -20,6 +20,22 @@ import useSWR from "swr";
 type Resource = "debates" | "characters";
 
 const ALL_CATEGORY = "all";
+const CATEGORY_MARKS: Record<string, string> = {
+  all: "▦",
+  food: "●",
+  culture: "◆",
+  tech: "◧",
+  life: "◐",
+  society: "◇",
+  fun: "✦",
+  other: "○",
+  expert: "●",
+  critic: "◆",
+  creator: "✦",
+  storyteller: "◐",
+  comedy: "◇",
+  utility: "◧",
+};
 
 export function WorkspaceApp() {
   const router = useRouter();
@@ -79,14 +95,16 @@ export function WorkspaceApp() {
   const activePage = resource === "debates" ? debatePage : characterPage;
   const activeLoading = resource === "debates" ? debatesLoading : charactersLoading;
 
-  const categoryDescription = useMemo(() => {
+  const activeCategoryLabel = useMemo(() => {
     if (activeCategory === ALL_CATEGORY) {
-      return resource === "debates"
-        ? "완료된 공개 토론 전체"
-        : "공개 캐릭터 전체";
+      return "전체";
     }
-    return activeCategories.find((category) => category.slug === activeCategory)?.name ?? "선택됨";
-  }, [activeCategories, activeCategory, resource]);
+    return activeCategories.find((category) => category.slug === activeCategory)?.name ?? "선택";
+  }, [activeCategories, activeCategory]);
+  const resourceLabel = resource === "debates" ? "공개 토론" : "공개 캐릭터";
+  const countLabel = activeLoading
+    ? "불러오는 중"
+    : `${activePage?.totalElements ?? 0}개`;
 
   function updateQuery(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -127,6 +145,11 @@ export function WorkspaceApp() {
 
   return (
     <main className="platform-shell">
+      <div className="platform-backdrop" aria-hidden="true">
+        <span className="backdrop-shape backdrop-diamond" />
+        <span className="backdrop-shape backdrop-circle" />
+      </div>
+
       <TopNavigation
         user={workspace?.user}
         isAuthenticated={isAuthenticated}
@@ -134,29 +157,17 @@ export function WorkspaceApp() {
         onOpenStudio={openStudio}
       />
 
-      <section className="arena-heading">
-        <div className="geometric-shape shape-one" />
-        <div className="geometric-shape shape-two" />
-        <p className="eyebrow">PUBLIC ARENA</p>
-        <h1>완료된 AI 토론과 공개 캐릭터를 바로 탐색합니다.</h1>
-        <p>
-          검색어와 카테고리로 공개된 결과만 좁혀보고, 로그인하면 같은 화면에서
-          내 캐릭터와 토론을 만들 수 있습니다.
-        </p>
-      </section>
+      <AnnouncementStrip />
 
-      <section className="explorer-panel" aria-label="공개 탐색">
+      <section className="explorer-panel" aria-label="공개 탐색" id="public-list">
         <div className="explorer-tools">
           <ResourceTabs resource={resource} onChange={setResource} />
           <form className="search-bar" onSubmit={updateQuery}>
             <input
               name="query"
               defaultValue={query}
-              placeholder={
-                resource === "debates"
-                  ? "토론 제목, 설명, 참가자 이름 검색"
-                  : "캐릭터 이름 또는 설명 검색"
-              }
+              placeholder="검색어를 입력하세요."
+              aria-label="검색어"
             />
             <button className="primary-button" type="submit" disabled={isPending}>
               검색
@@ -177,13 +188,9 @@ export function WorkspaceApp() {
         <header className="section-title-row">
           <div>
             <p className="eyebrow">{resource === "debates" ? "DEBATES" : "CHARACTERS"}</p>
-            <h2>{categoryDescription}</h2>
+            <h1>{activeCategoryLabel}</h1>
           </div>
-          <p>
-            {activeLoading
-              ? "불러오는 중"
-              : `${activePage?.totalElements ?? 0}개의 공개 항목`}
-          </p>
+          <p aria-label={`${resourceLabel} 수`}>{countLabel}</p>
         </header>
 
         {resource === "debates" ? (
@@ -191,20 +198,6 @@ export function WorkspaceApp() {
         ) : (
           <CharacterCatalog characters={characterPage?.items ?? []} onCreate={openStudio} />
         )}
-      </section>
-
-      <section className="studio-band" aria-labelledby="studio-title">
-        <div>
-          <p className="eyebrow">MY STUDIO</p>
-          <h2 id="studio-title">내 캐릭터로 공개될 수 있는 토론을 만듭니다.</h2>
-          <p>
-            PUBLIC 토론은 완료된 뒤 공개 목록에 노출됩니다. 생성 직후에는 내
-            작업공간에서만 이어서 진행합니다.
-          </p>
-        </div>
-        <button className="primary-button" type="button" onClick={openStudio}>
-          {isAuthenticated ? "제작 스튜디오 열기" : "로그인하고 만들기"}
-        </button>
       </section>
 
       {studioOpen && workspace ? (
@@ -238,6 +231,15 @@ export function WorkspaceApp() {
         </section>
       ) : null}
     </main>
+  );
+}
+
+function AnnouncementStrip() {
+  return (
+    <section className="announcement-strip" aria-label="공지">
+      <strong>[업데이트]</strong>
+      <span>공개 탐색</span>
+    </section>
   );
 }
 
@@ -329,7 +331,8 @@ function CategoryRail({
         type="button"
         onClick={() => onSelect(ALL_CATEGORY)}
       >
-        전체
+        <span aria-hidden="true">{CATEGORY_MARKS.all}</span>
+        <span>전체</span>
       </button>
       {categories.map((category) => (
         <button
@@ -338,7 +341,10 @@ function CategoryRail({
           type="button"
           onClick={() => onSelect(category.slug ?? ALL_CATEGORY)}
         >
-          {category.name}
+          <span aria-hidden="true">
+            {CATEGORY_MARKS[category.slug ?? "other"] ?? CATEGORY_MARKS.other}
+          </span>
+          <span>{category.name}</span>
         </button>
       ))}
     </section>
@@ -353,41 +359,28 @@ function DebateCatalog({
   onCreate: () => void;
 }) {
   if (debates.length === 0) {
-    return <EmptyCatalog message="조건에 맞는 공개 토론이 없습니다." onCreate={onCreate} />;
+    return <EmptyCatalog message="공개 항목 없음" onCreate={onCreate} />;
   }
 
   return (
-    <div className="debate-grid" id="public-list">
+    <div className="catalog-grid">
       {debates.map((debate) => (
-        <article className="debate-card" key={debate.id}>
-          <div className="debate-card-top">
-            <span>{debate.category?.name ?? debate.topicCategory ?? "기타"}</span>
-            <strong>{debate.status}</strong>
+        <article className="catalog-card" key={debate.id ?? debate.topicTitle}>
+          <CatalogThumbnail
+            kind="debate"
+            title={debate.topicTitle ?? "토론"}
+            meta={debate.category?.name ?? debate.topicCategory ?? "기타"}
+            seed={`${debate.id ?? ""}-${debate.topicTitle ?? ""}`}
+            badge={debate.status ?? "COMPLETED"}
+          />
+          <div className="catalog-card-body">
+            <h2>{debate.topicTitle}</h2>
+            <p>{debate.topicDescription}</p>
+            <div className="catalog-meta">
+              <span>{debate.category?.name ?? debate.topicCategory ?? "기타"}</span>
+              <span>{formatParticipantNames(debate.participants)}</span>
+            </div>
           </div>
-          <div className="debate-card-mark" />
-          <h3>{debate.topicTitle}</h3>
-          <p>{debate.topicDescription}</p>
-          <div className="mini-participants">
-            {(debate.participants ?? []).map((participant) => (
-              <span key={participant.id ?? participant.position}>
-                {participant.name}
-              </span>
-            ))}
-          </div>
-          <dl className="stat-line">
-            <div>
-              <dt>라운드</dt>
-              <dd>{debate.currentRound ?? 0}/{debate.maxRounds ?? 0}</dd>
-            </div>
-            <div>
-              <dt>형식</dt>
-              <dd>{debate.format}</dd>
-            </div>
-            <div>
-              <dt>완료</dt>
-              <dd>{formatDate(debate.endedAt)}</dd>
-            </div>
-          </dl>
         </article>
       ))}
     </div>
@@ -402,19 +395,61 @@ function CharacterCatalog({
   onCreate: () => void;
 }) {
   if (characters.length === 0) {
-    return <EmptyCatalog message="조건에 맞는 공개 캐릭터가 없습니다." onCreate={onCreate} />;
+    return <EmptyCatalog message="공개 항목 없음" onCreate={onCreate} />;
   }
 
   return (
-    <div className="character-catalog" id="public-list">
+    <div className="catalog-grid">
       {characters.map((character) => (
-        <article className="public-character-card" key={character.id}>
-          <span>{character.category?.name ?? "기타"}</span>
-          <h3>{character.name}</h3>
-          <p>{character.description || "설명 없음"}</p>
-          <small>{character.visibility}</small>
+        <article className="catalog-card" key={character.id ?? character.name}>
+          <CatalogThumbnail
+            kind="character"
+            title={character.name ?? "캐릭터"}
+            meta={character.category?.name ?? "기타"}
+            seed={`${character.id ?? ""}-${character.name ?? ""}`}
+            badge={character.visibility}
+          />
+          <div className="catalog-card-body">
+            <h2>{character.name}</h2>
+            <p>{character.description || "설명 없음"}</p>
+            <div className="catalog-meta">
+              <span>{character.category?.name ?? "기타"}</span>
+              <span>{character.visibility}</span>
+            </div>
+          </div>
         </article>
       ))}
+    </div>
+  );
+}
+
+function CatalogThumbnail({
+  kind,
+  title,
+  meta,
+  seed,
+  badge,
+}: {
+  kind: "debate" | "character";
+  title: string;
+  meta: string;
+  seed: string;
+  badge: string | undefined;
+}) {
+  const tone = stableTone(seed);
+
+  return (
+    <div
+      className={`catalog-thumbnail catalog-thumbnail-${kind} tone-${tone}`}
+      aria-label={`${title} 썸네일`}
+    >
+      <span className="thumbnail-orb thumbnail-orb-one" aria-hidden="true" />
+      <span className="thumbnail-orb thumbnail-orb-two" aria-hidden="true" />
+      <span className="thumbnail-symbol" aria-hidden="true">
+        {makeThumbnailMark(title)}
+      </span>
+      <span className="thumbnail-meta">{meta}</span>
+      {badge ? <span className="thumbnail-badge">{badge}</span> : null}
     </div>
   );
 }
@@ -430,7 +465,7 @@ function EmptyCatalog({
     <div className="empty-catalog">
       <p>{message}</p>
       <button className="secondary-button" type="button" onClick={onCreate}>
-        직접 만들기
+        만들기
       </button>
     </div>
   );
@@ -451,9 +486,26 @@ function publicListUrl(base: string, query: string, category: string | undefined
   return `${base}?${params.toString()}`;
 }
 
-function formatDate(value: string | undefined) {
-  if (!value) {
-    return "-";
+function formatParticipantNames(participants: DebateSession["participants"]) {
+  const names = (participants ?? [])
+    .map((participant) => participant.name)
+    .filter((name): name is string => Boolean(name));
+
+  if (names.length === 0) {
+    return "참가자";
   }
-  return value.slice(0, 10);
+  return names.slice(0, 2).join(" vs ");
+}
+
+function stableTone(value: string) {
+  let hash = 0;
+  for (let index = 0; index < value.length; index += 1) {
+    hash = (hash * 31 + value.charCodeAt(index)) % 997;
+  }
+  return hash % 6;
+}
+
+function makeThumbnailMark(value: string) {
+  const compact = value.replace(/\s+/g, "");
+  return compact.slice(0, 2) || "AI";
 }

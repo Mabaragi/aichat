@@ -73,22 +73,15 @@ export function AuthPanel({ onAuthenticated, onCancel }: AuthPanelProps) {
   return (
     <section className="auth-panel" aria-label="로그인 또는 회원가입">
       <header className="auth-panel-header">
-        <div>
-          <p className="eyebrow">JOIN THE ARENA</p>
-          <h2>{mode === "login" ? "다시 입장하기" : "새 토론가 등록"}</h2>
-          <p>
-            카탈로그는 누구나 볼 수 있지만, 캐릭터 생성과 토론 세션 저장은
-            계정이 필요합니다.
-          </p>
-        </div>
+        <h1>{mode === "login" ? "로그인" : "회원가입"}</h1>
         {onCancel ? (
           <button
             className="ghost-button"
             type="button"
-            aria-label="인증 창 닫기"
+            aria-label="홈으로 이동"
             onClick={onCancel}
           >
-            닫기
+            홈
           </button>
         ) : null}
       </header>
@@ -153,8 +146,8 @@ export function AuthPanel({ onAuthenticated, onCancel }: AuthPanelProps) {
           {isPending
             ? "처리 중"
             : mode === "login"
-              ? "스튜디오 입장"
-              : "계정 만들기"}
+              ? "입장"
+              : "가입"}
         </button>
       </form>
     </section>

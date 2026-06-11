@@ -1,6 +1,7 @@
 "use client";
 
 import { AuthPanel } from "@/components/AuthPanel";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 export function LoginScreen() {
@@ -13,16 +14,25 @@ export function LoginScreen() {
 
   return (
     <main className="login-shell">
-      <section className="login-visual" aria-hidden="true">
-        <div className="geometric-shape shape-one" />
-        <div className="geometric-shape shape-two" />
-        <p>AI Debate Arena</p>
-        <h1>내 캐릭터와 토론을 이어가려면 로그인하세요.</h1>
+      <header className="auth-top-navigation">
+        <Link className="brand-mark" href="/" aria-label="AI Debate Arena 홈">
+          <span>AI</span>
+          Debate Arena
+        </Link>
+        <nav aria-label="로그인 메뉴">
+          <Link href="/">공개 탐색</Link>
+          <span>로그인</span>
+        </nav>
+      </header>
+
+      <section className="login-stage" aria-label="로그인">
+        <span className="login-shape login-shape-one" aria-hidden="true" />
+        <span className="login-shape login-shape-two" aria-hidden="true" />
+        <AuthPanel
+          onAuthenticated={handleAuthenticated}
+          onCancel={() => router.push("/")}
+        />
       </section>
-      <AuthPanel
-        onAuthenticated={handleAuthenticated}
-        onCancel={() => router.push("/")}
-      />
     </main>
   );
 }
