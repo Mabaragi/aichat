@@ -4,7 +4,9 @@ import com.example.aichat.character.domain.Character;
 import com.example.aichat.character.domain.CharacterRepository;
 import com.example.aichat.character.domain.Personality;
 import com.example.aichat.character.domain.SpeechStyle;
+import com.example.aichat.common.application.PagedResult;
 import org.springframework.context.annotation.Profile;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -41,6 +43,25 @@ public class JpaCharacterRepositoryAdapter implements CharacterRepository {
     }
 
     @Override
+    public PagedResult<Character> findPublic(String query, Long categoryId, int page, int size) {
+        var result = characterJpaRepository.findPublic(
+                normalizeQuery(query),
+                categoryId,
+                PageRequest.of(page, size)
+        );
+        return new PagedResult<>(
+                result.getContent().stream()
+                        .map(JpaCharacterRepositoryAdapter::toDomain)
+                        .toList(),
+                result.getNumber(),
+                result.getSize(),
+                result.getTotalElements(),
+                result.getTotalPages(),
+                result.hasNext()
+        );
+    }
+
+    @Override
     public void deleteById(Long characterId) {
         characterJpaRepository.deleteById(characterId);
     }
@@ -49,6 +70,7 @@ public class JpaCharacterRepositoryAdapter implements CharacterRepository {
         return new CharacterJpaEntity(
                 character.getId(),
                 character.getOwnerId(),
+                character.getCategoryId(),
                 character.getName(),
                 character.getDescription(),
                 unwrap(character.getPersonality()),
@@ -63,6 +85,7 @@ public class JpaCharacterRepositoryAdapter implements CharacterRepository {
         return new Character(
                 entity.id(),
                 entity.ownerId(),
+                entity.categoryId(),
                 entity.name(),
                 entity.description(),
                 wrapPersonality(entity.personality()),
@@ -87,6 +110,13 @@ public class JpaCharacterRepositoryAdapter implements CharacterRepository {
 
     private static SpeechStyle wrapSpeechStyle(String speechStyle) {
         return speechStyle == null ? null : SpeechStyle.of(speechStyle);
+    }
+
+    private static String normalizeQuery(String query) {
+        if (query == null || query.isBlank()) {
+            return null;
+        }
+        return query.trim();
     }
 
 }

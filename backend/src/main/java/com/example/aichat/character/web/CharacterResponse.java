@@ -1,6 +1,7 @@
 package com.example.aichat.character.web;
 
 import com.example.aichat.character.application.CharacterView;
+import com.example.aichat.category.web.CategorySummaryResponse;
 import io.swagger.v3.oas.annotations.media.Schema;
 import tools.jackson.core.type.TypeReference;
 import tools.jackson.core.JacksonException;
@@ -15,6 +16,8 @@ public record CharacterResponse(
         Long id,
         @Schema(description = "Owner user identifier.", example = "1")
         Long ownerId,
+        @Schema(description = "Character category summary.")
+        CategorySummaryResponse category,
         @Schema(description = "Character name.", example = "Rational Gourmet")
         String name,
         @Schema(description = "Short character description.",
@@ -42,6 +45,7 @@ public record CharacterResponse(
         return new CharacterResponse(
                 view.id(),
                 view.ownerId(),
+                CategorySummaryResponse.from(view.category()),
                 view.name(),
                 view.description(),
                 toJsonObject(objectMapper, view.personality()),

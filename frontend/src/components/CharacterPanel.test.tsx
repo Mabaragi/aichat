@@ -2,6 +2,10 @@ import { CharacterPanel } from "@/components/CharacterPanel";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+const categories = [
+  { id: 1, scope: "CHARACTER" as const, slug: "other", name: "기타" },
+];
+
 describe("CharacterPanel", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
@@ -14,6 +18,7 @@ describe("CharacterPanel", () => {
       <CharacterPanel
         user={{ id: 1, email: "owner@example.com", nickname: "owner" }}
         characters={[]}
+        categories={categories}
         onCreated={vi.fn()}
         onLogout={vi.fn()}
       />,

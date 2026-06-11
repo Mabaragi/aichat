@@ -27,6 +27,7 @@ frontend/coverage/
 frontend/.env
 frontend/.env.local
 frontend/.env.*.local
+frontend/references/machugi-io/raw/
 __pycache__/
 *.pyc
 

@@ -6,6 +6,11 @@ spring:
     url: jdbc:sqlite:./data/ai-debate.db
     driver-class-name: org.sqlite.JDBC
 
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    baseline-version: 1
+
   jpa:
     database-platform: org.hibernate.community.dialect.SQLiteDialect
     hibernate:

@@ -1,21 +1,38 @@
 "use client";
 
-import type { Character, DebateCreate, DebateSession } from "@/lib/api-types";
+import type {
+  Category,
+  Character,
+  DebateCreate,
+  DebateLifecycle,
+  DebateSession,
+  DebateTurn,
+  GeneratedDebateTurn,
+} from "@/lib/api-types";
 import { ApiError, bffFetch, readJson } from "@/lib/bff-fetch";
-import { FormEvent, useState, useTransition } from "react";
+import { FormEvent, useEffect, useState, useTransition } from "react";
 
 type DebateComposerProps = {
   characters: Character[];
+  categories: Category[];
 };
 
 const MODELS = ["FAST", "BALANCED", "QUALITY", "MOCK"] as const;
+const SESSION_STORAGE_KEY = "aichat.currentDebate.v1";
 
-export function DebateComposer({ characters }: DebateComposerProps) {
+type StoredDebateState = {
+  session: DebateSession;
+  turns: DebateTurn[];
+};
+
+export function DebateComposer({ characters, categories }: DebateComposerProps) {
   const firstCharacterId = characters[0]?.id;
   const [leftId, setLeftId] = useState<number | undefined>(firstCharacterId);
   const [rightId, setRightId] = useState<number | undefined>(firstCharacterId);
   const [result, setResult] = useState<DebateSession>();
+  const [turns, setTurns] = useState<DebateTurn[]>([]);
   const [error, setError] = useState<string>();
+  const [stageMessage, setStageMessage] = useState<string>();
   const [isPending, startTransition] = useTransition();
 
   const effectiveLeftId = leftId ?? firstCharacterId;
@@ -26,6 +43,42 @@ export function DebateComposer({ characters }: DebateComposerProps) {
   const selectedRight = characters.find(
     (character) => character.id === effectiveRightId,
   );
+
+  useEffect(() => {
+    let cancelled = false;
+    queueMicrotask(() => {
+      if (cancelled) {
+        return;
+      }
+      try {
+        const raw = sessionStorage.getItem(SESSION_STORAGE_KEY);
+        if (!raw) {
+          return;
+        }
+        const parsed = JSON.parse(raw) as StoredDebateState;
+        if (parsed.session?.id) {
+          setResult(parsed.session);
+          setTurns(parsed.turns ?? []);
+        }
+      } catch {
+        sessionStorage.removeItem(SESSION_STORAGE_KEY);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!result) {
+      sessionStorage.removeItem(SESSION_STORAGE_KEY);
+      return;
+    }
+    sessionStorage.setItem(
+      SESSION_STORAGE_KEY,
+      JSON.stringify({ session: result, turns } satisfies StoredDebateState),
+    );
+  }, [result, turns]);
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -41,9 +94,12 @@ export function DebateComposer({ characters }: DebateComposerProps) {
       topic: {
         title: String(data.get("title") ?? "").trim(),
         description: String(data.get("description") ?? "").trim(),
-        category: String(data.get("category") ?? "").trim() || undefined,
+        category: String(data.get("category") ?? "other").trim() || "other",
       },
       format: String(data.get("format")) as DebateCreate["format"],
+      visibility: String(data.get("visibility") ?? "PRIVATE") as
+        | "PUBLIC"
+        | "PRIVATE",
       maxRounds: Number(data.get("maxRounds")),
       maxTurnLength: Number(data.get("maxTurnLength")),
       participants: [
@@ -78,13 +134,103 @@ export function DebateComposer({ characters }: DebateComposerProps) {
         headers: { "content-type": "application/json" },
         body: JSON.stringify(payload),
       });
-      setResult(await readJson<DebateSession>(response));
+      const created = await readJson<DebateSession>(response);
+      setTurns([]);
+      setResult(created);
+      setStageMessage("세션이 생성되었습니다. 시작하면 턴을 생성할 수 있습니다.");
     } catch (caught) {
       setError(
         caught instanceof ApiError
           ? caught.message
           : "토론 세션을 만들지 못했습니다.",
       );
+    }
+  }
+
+  async function startSession() {
+    if (!result?.id) {
+      return;
+    }
+    setError(undefined);
+    try {
+      const response = await bffFetch(`/api/debate-sessions/${result.id}/start`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: "{}",
+      });
+      const lifecycle = await readJson<DebateLifecycle>(response);
+      setResult((current) =>
+        current
+          ? {
+              ...current,
+              status: lifecycle.status,
+              startedAt: lifecycle.startedAt,
+              endedAt: lifecycle.endedAt,
+            }
+          : current,
+      );
+      setStageMessage("토론이 시작되었습니다. 다음 턴을 생성하세요.");
+    } catch (caught) {
+      setError(caught instanceof ApiError ? caught.message : "세션을 시작하지 못했습니다.");
+    }
+  }
+
+  async function generateTurn() {
+    if (!result?.id) {
+      return;
+    }
+    setError(undefined);
+    try {
+      const response = await bffFetch(
+        `/api/debate-sessions/${result.id}/turns/generate`,
+        {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: "{}",
+        },
+      );
+      const generated = await readJson<GeneratedDebateTurn>(response);
+      const nextTurns = [...turns, generated as DebateTurn];
+      setTurns(nextTurns);
+      if (
+        result.maxRounds !== undefined &&
+        result.participants &&
+        nextTurns.length >= result.maxRounds * result.participants.length
+      ) {
+        setResult({ ...result, status: "COMPLETED", endedAt: generated.createdAt });
+        setStageMessage("최대 턴 수에 도달해 토론이 완료되었습니다.");
+      } else {
+        setStageMessage(`${nextTurns.length}번째 턴이 생성되었습니다.`);
+      }
+    } catch (caught) {
+      setError(caught instanceof ApiError ? caught.message : "턴을 생성하지 못했습니다.");
+    }
+  }
+
+  async function completeSession() {
+    if (!result?.id) {
+      return;
+    }
+    setError(undefined);
+    try {
+      const response = await bffFetch(`/api/debate-sessions/${result.id}/complete`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: "{}",
+      });
+      const lifecycle = await readJson<DebateLifecycle>(response);
+      setResult((current) =>
+        current
+          ? {
+              ...current,
+              status: lifecycle.status,
+              endedAt: lifecycle.endedAt,
+            }
+          : current,
+      );
+      setStageMessage("토론이 완료되었습니다. PUBLIC 세션이면 공개 목록에 노출됩니다.");
+    } catch (caught) {
+      setError(caught instanceof ApiError ? caught.message : "세션을 완료하지 못했습니다.");
     }
   }
 
@@ -128,13 +274,26 @@ export function DebateComposer({ characters }: DebateComposerProps) {
             </label>
             <label>
               카테고리
-              <input name="category" placeholder="FOOD" />
+              <select name="category" defaultValue={categories[0]?.slug ?? "other"}>
+                {categories.map((category) => (
+                  <option key={category.id ?? category.slug} value={category.slug}>
+                    {category.name}
+                  </option>
+                ))}
+              </select>
             </label>
             <label>
               형식
               <select name="format" defaultValue="PROS_AND_CONS">
                 <option value="PROS_AND_CONS">찬반 토론</option>
                 <option value="FREE_DISCUSSION">자유 토론</option>
+              </select>
+            </label>
+            <label>
+              공개 범위
+              <select name="visibility" defaultValue="PRIVATE">
+                <option value="PRIVATE">비공개</option>
+                <option value="PUBLIC">완료 후 공개</option>
               </select>
             </label>
             <label>
@@ -191,7 +350,22 @@ export function DebateComposer({ characters }: DebateComposerProps) {
         </form>
       )}
 
-      {result ? <DebateResult result={result} /> : null}
+      {result ? (
+        <DebateResult
+          result={result}
+          turns={turns}
+          message={stageMessage}
+          isPending={isPending}
+          onStart={() => startTransition(() => void startSession())}
+          onGenerate={() => startTransition(() => void generateTurn())}
+          onComplete={() => startTransition(() => void completeSession())}
+          onClear={() => {
+            setResult(undefined);
+            setTurns([]);
+            setStageMessage(undefined);
+          }}
+        />
+      ) : null}
     </section>
   );
 }
@@ -250,7 +424,29 @@ function ParticipantSelect({
   );
 }
 
-function DebateResult({ result }: { result: DebateSession }) {
+function DebateResult({
+  result,
+  turns,
+  message,
+  isPending,
+  onStart,
+  onGenerate,
+  onComplete,
+  onClear,
+}: {
+  result: DebateSession;
+  turns: DebateTurn[];
+  message: string | undefined;
+  isPending: boolean;
+  onStart: () => void;
+  onGenerate: () => void;
+  onComplete: () => void;
+  onClear: () => void;
+}) {
+  const canStart = result.status === "CREATED";
+  const canGenerate = result.status === "RUNNING";
+  const canComplete = result.status === "RUNNING";
+
   return (
     <section className="debate-result" aria-live="polite">
       <header>
@@ -261,6 +457,36 @@ function DebateResult({ result }: { result: DebateSession }) {
         <span>{result.status ?? "CREATED"}</span>
       </header>
       <p>{result.topicDescription}</p>
+      {message ? <p className="result-message">{message}</p> : null}
+      <div className="result-actions">
+        <button
+          className="secondary-button"
+          type="button"
+          disabled={!canStart || isPending}
+          onClick={onStart}
+        >
+          시작
+        </button>
+        <button
+          className="secondary-button"
+          type="button"
+          disabled={!canGenerate || isPending}
+          onClick={onGenerate}
+        >
+          다음 턴 생성
+        </button>
+        <button
+          className="secondary-button"
+          type="button"
+          disabled={!canComplete || isPending}
+          onClick={onComplete}
+        >
+          완료
+        </button>
+        <button className="ghost-button" type="button" onClick={onClear}>
+          세션 지우기
+        </button>
+      </div>
       <div className="result-participants">
         {(result.participants ?? []).map((participant, index) => (
           <article key={participant.id ?? index}>
@@ -280,10 +506,24 @@ function DebateResult({ result }: { result: DebateSession }) {
           </article>
         ))}
       </div>
+      <div className="turn-list">
+        {turns.length === 0 ? (
+          <p>아직 생성된 턴이 없습니다.</p>
+        ) : (
+          turns.map((turn) => (
+            <article key={turn.id ?? turn.turnIndex}>
+              <span>
+                R{turn.round} · #{turn.turnIndex} · {turn.participantModel}
+              </span>
+              <p>{turn.content}</p>
+            </article>
+          ))
+        )}
+      </div>
     </section>
   );
 }
 
-function formatSnapshot(value: Record<string, unknown> | undefined) {
+function formatSnapshot(value: Record<string, unknown> | undefined | null) {
   return value ? JSON.stringify(value) : "미설정";
 }

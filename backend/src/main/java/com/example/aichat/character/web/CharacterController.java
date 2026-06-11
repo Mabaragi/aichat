@@ -190,6 +190,7 @@ public class CharacterController {
         return new CreateCharacterCommand(
                 actor,
                 actor.userId(),
+                request.category(),
                 request.name(),
                 request.description(),
                 toPersonality(request.personality()),
@@ -203,6 +204,7 @@ public class CharacterController {
         return new UpdateCharacterCommand(
                 actor,
                 characterId,
+                request.category(),
                 request.name(),
                 request.description(),
                 toPersonality(request.personality()),

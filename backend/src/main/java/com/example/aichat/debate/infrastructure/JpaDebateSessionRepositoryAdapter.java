@@ -1,8 +1,11 @@
 package com.example.aichat.debate.infrastructure;
 
+import com.example.aichat.common.application.PagedResult;
 import com.example.aichat.debate.domain.DebateParticipant;
 import com.example.aichat.debate.domain.DebateSession;
 import com.example.aichat.debate.domain.DebateSessionRepository;
+import com.example.aichat.debate.domain.DebateSessionStatus;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -42,6 +45,8 @@ public class JpaDebateSessionRepositoryAdapter implements DebateSessionRepositor
                 session.getTopicTitle(),
                 session.getTopicDescription(),
                 session.getTopicCategory(),
+                session.getCategoryId(),
+                session.getVisibility(),
                 session.getStatus(),
                 session.getFormat(),
                 session.getMaxRounds(),
@@ -76,9 +81,11 @@ public class JpaDebateSessionRepositoryAdapter implements DebateSessionRepositor
         return new DebateSession(
                 entity.id(),
                 entity.ownerId(),
+                entity.categoryId(),
                 entity.topicTitle(),
                 entity.topicDescription(),
                 entity.topicCategory(),
+                entity.visibility(),
                 entity.status(),
                 entity.format(),
                 entity.maxRounds(),
@@ -91,6 +98,39 @@ public class JpaDebateSessionRepositoryAdapter implements DebateSessionRepositor
                 entity.startedAt(),
                 entity.endedAt()
         );
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public PagedResult<DebateSession> findPublicCompleted(String query, Long categoryId,
+                                                          int page, int size) {
+        var result = jpaRepository.findPublicCompleted(
+                DebateSessionStatus.COMPLETED,
+                normalizeQuery(query),
+                categoryId,
+                PageRequest.of(page, size)
+        );
+        return new PagedResult<>(
+                result.getContent().stream()
+                        .map(JpaDebateSessionRepositoryAdapter::toDomain)
+                        .toList(),
+                result.getNumber(),
+                result.getSize(),
+                result.getTotalElements(),
+                result.getTotalPages(),
+                result.hasNext()
+        );
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<DebateSession> findPublicCompletedById(Long sessionId) {
+        return jpaRepository.findByIdAndVisibilityAndStatus(
+                        sessionId,
+                        "PUBLIC",
+                        DebateSessionStatus.COMPLETED
+                )
+                .map(JpaDebateSessionRepositoryAdapter::toDomain);
     }
 
     private static DebateParticipant toDomain(DebateParticipantJpaEntity entity) {
@@ -115,5 +155,12 @@ public class JpaDebateSessionRepositoryAdapter implements DebateSessionRepositor
             nextSessionId.set(jpaRepository.findMaxId());
         }
         return nextSessionId.incrementAndGet();
+    }
+
+    private static String normalizeQuery(String query) {
+        if (query == null || query.isBlank()) {
+            return null;
+        }
+        return query.trim();
     }
 }

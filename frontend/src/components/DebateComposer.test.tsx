@@ -11,6 +11,10 @@ const character: Character = {
   visibility: "PRIVATE",
 };
 
+const categories = [
+  { id: 1, scope: "DEBATE" as const, slug: "food", name: "음식" },
+];
+
 describe("DebateComposer", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
@@ -44,8 +48,10 @@ describe("DebateComposer", () => {
       }),
     );
     vi.stubGlobal("fetch", fetchMock);
-    const { rerender } = render(<DebateComposer characters={[]} />);
-    rerender(<DebateComposer characters={[character]} />);
+    const { rerender } = render(
+      <DebateComposer characters={[]} categories={categories} />,
+    );
+    rerender(<DebateComposer characters={[character]} categories={categories} />);
 
     fireEvent.change(screen.getByLabelText("제목"), {
       target: { value: "부먹 vs 찍먹" },
@@ -64,6 +70,8 @@ describe("DebateComposer", () => {
         { characterId: 10, model: "FAST" },
         { characterId: 10, model: "QUALITY" },
       ],
+      topic: { category: "food" },
+      visibility: "PRIVATE",
     });
     expect(await screen.findByText("SESSION CREATED")).toBeInTheDocument();
     expect(screen.getByText("FAST / character #10")).toBeVisible();

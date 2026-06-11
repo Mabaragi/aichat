@@ -12,6 +12,7 @@ public class CharacterJpaEntity {
 
     CharacterJpaEntity(Long id,
                        Long ownerId,
+                       Long categoryId,
                        String name,
                        String description,
                        String personality,
@@ -21,6 +22,7 @@ public class CharacterJpaEntity {
                        LocalDateTime updatedAt) {
         this.id = id;
         this.ownerId = ownerId;
+        this.categoryId = categoryId;
         this.name = name;
         this.description = description;
         this.personality = personality;
@@ -36,6 +38,10 @@ public class CharacterJpaEntity {
 
     Long ownerId() {
         return ownerId;
+    }
+
+    Long categoryId() {
+        return categoryId;
     }
 
     String name() {
@@ -72,6 +78,9 @@ public class CharacterJpaEntity {
 
     @Column(name = "owner_id", nullable = false)
     private Long ownerId;
+
+    @Column(name = "category_id")
+    private Long categoryId;
 
     @Column(nullable = false)
     private String name;

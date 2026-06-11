@@ -1,6 +1,6 @@
 "use client";
 
-import type { Character, CharacterCreate, User } from "@/lib/api-types";
+import type { Category, Character, CharacterCreate, User } from "@/lib/api-types";
 import { ApiError, bffFetch, readJson } from "@/lib/bff-fetch";
 import { parseOptionalJsonObject } from "@/lib/json-object";
 import { FormEvent, useState, useTransition } from "react";
@@ -8,6 +8,7 @@ import { FormEvent, useState, useTransition } from "react";
 type CharacterPanelProps = {
   user: User;
   characters: Character[];
+  categories: Category[];
   onCreated: (character: Character) => void;
   onLogout: () => void;
 };
@@ -15,6 +16,7 @@ type CharacterPanelProps = {
 export function CharacterPanel({
   user,
   characters,
+  categories,
   onCreated,
   onLogout,
 }: CharacterPanelProps) {
@@ -31,6 +33,7 @@ export function CharacterPanel({
     try {
       payload = {
         name: String(data.get("name") ?? "").trim(),
+        category: String(data.get("category") ?? "other").trim() || "other",
         description: String(data.get("description") ?? "").trim() || undefined,
         personality: parseOptionalJsonObject(
           String(data.get("personality") ?? ""),
@@ -107,7 +110,10 @@ export function CharacterPanel({
                 <h4>{character.name ?? "이름 없음"}</h4>
                 <p>{character.description || "설명 없음"}</p>
               </div>
-              <small>{character.visibility === "PUBLIC" ? "공개" : "비공개"}</small>
+              <small>
+                {character.category?.name ?? "기타"} ·{" "}
+                {character.visibility === "PUBLIC" ? "공개" : "비공개"}
+              </small>
             </article>
           ))
         )}
@@ -135,6 +141,16 @@ export function CharacterPanel({
               placeholder="합리적 미식가"
               required
             />
+          </label>
+          <label>
+            카테고리
+            <select name="category" defaultValue={categories[0]?.slug ?? "other"}>
+              {categories.map((category) => (
+                <option key={category.id ?? category.slug} value={category.slug}>
+                  {category.name}
+                </option>
+              ))}
+            </select>
           </label>
           <label>
             설명

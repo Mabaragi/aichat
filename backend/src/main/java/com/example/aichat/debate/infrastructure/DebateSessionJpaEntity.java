@@ -26,6 +26,9 @@ public class DebateSessionJpaEntity {
     @Column(name = "owner_id", nullable = false)
     private Long ownerId;
 
+    @Column(name = "category_id")
+    private Long categoryId;
+
     @Column(name = "topic_title", nullable = false)
     private String topicTitle;
 
@@ -34,6 +37,9 @@ public class DebateSessionJpaEntity {
 
     @Column(name = "topic_category")
     private String topicCategory;
+
+    @Column(nullable = false)
+    private String visibility;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
@@ -70,15 +76,18 @@ public class DebateSessionJpaEntity {
 
     DebateSessionJpaEntity(Long id, Long ownerId, String topicTitle,
                            String topicDescription, String topicCategory,
+                           Long categoryId, String visibility,
                            DebateSessionStatus status, DebateFormat format,
                            int maxRounds, int currentRound, Integer maxTurnLength,
                            LocalDateTime createdAt, LocalDateTime startedAt,
                            LocalDateTime endedAt) {
         this.id = id;
         this.ownerId = ownerId;
+        this.categoryId = categoryId;
         this.topicTitle = topicTitle;
         this.topicDescription = topicDescription;
         this.topicCategory = topicCategory;
+        this.visibility = visibility;
         this.status = status;
         this.format = format;
         this.maxRounds = maxRounds;
@@ -102,6 +111,10 @@ public class DebateSessionJpaEntity {
         return ownerId;
     }
 
+    Long categoryId() {
+        return categoryId;
+    }
+
     String topicTitle() {
         return topicTitle;
     }
@@ -112,6 +125,10 @@ public class DebateSessionJpaEntity {
 
     String topicCategory() {
         return topicCategory;
+    }
+
+    String visibility() {
+        return visibility;
     }
 
     DebateSessionStatus status() {

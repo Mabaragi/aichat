@@ -7,16 +7,23 @@ import com.example.aichat.common.security.RequestActor;
 public record UpdateCharacterCommand(
         RequestActor actor,
         Long characterId,
+        String category,
         String name,
         String description,
         Personality personality,
         SpeechStyle speechStyle,
         String visibility
 ) {
+    public UpdateCharacterCommand(RequestActor actor, Long characterId, String name,
+                                  String description, Personality personality,
+                                  SpeechStyle speechStyle, String visibility) {
+        this(actor, characterId, null, name, description, personality, speechStyle, visibility);
+    }
+
     public UpdateCharacterCommand(Long characterId, String name, String description,
                                   Personality personality, SpeechStyle speechStyle,
                                   String visibility) {
-        this(RequestActor.system(), characterId, name, description,
+        this(RequestActor.system(), characterId, null, name, description,
                 personality, speechStyle, visibility);
     }
 }

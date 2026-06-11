@@ -28,3 +28,13 @@ export async function proxyAuthenticatedMutation(
 
   return isNextResponse(upstream) ? upstream : forwardResponse(upstream);
 }
+
+export async function proxyAuthenticatedGet(backendPath: string) {
+  const accessToken = (await cookies()).get(ACCESS_COOKIE)?.value;
+  const upstream = await backendFetch(backendPath, {
+    method: "GET",
+    headers: bearerHeaders(accessToken),
+  });
+
+  return isNextResponse(upstream) ? upstream : forwardResponse(upstream);
+}

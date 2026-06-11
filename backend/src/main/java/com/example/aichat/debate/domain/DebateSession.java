@@ -2,6 +2,8 @@ package com.example.aichat.debate.domain;
 
 import lombok.Getter;
 
+import com.example.aichat.common.domain.Visibility;
+
 import java.time.LocalDateTime;
 import java.util.Comparator;
 import java.util.List;
@@ -14,12 +16,15 @@ public class DebateSession {
     public static final int MAX_MAX_ROUNDS = 10;
     public static final int MIN_MAX_TURN_LENGTH = 100;
     public static final int MAX_MAX_TURN_LENGTH = 2000;
+    public static final String DEFAULT_VISIBILITY = Visibility.DEFAULT;
 
     private final Long id;
     private final Long ownerId;
+    private final Long categoryId;
     private final String topicTitle;
     private final String topicDescription;
     private final String topicCategory;
+    private final String visibility;
     private DebateSessionStatus status;
     private final DebateFormat format;
     private final int maxRounds;
@@ -35,6 +40,16 @@ public class DebateSession {
                          int maxRounds, int currentRound, Integer maxTurnLength,
                          List<DebateParticipant> participants, LocalDateTime createdAt,
                          LocalDateTime startedAt, LocalDateTime endedAt) {
+        this(id, ownerId, null, topicTitle, topicDescription, topicCategory,
+                DEFAULT_VISIBILITY, status, format, maxRounds, currentRound,
+                maxTurnLength, participants, createdAt, startedAt, endedAt);
+    }
+
+    public DebateSession(Long id, Long ownerId, Long categoryId, String topicTitle, String topicDescription,
+                         String topicCategory, String visibility, DebateSessionStatus status, DebateFormat format,
+                         int maxRounds, int currentRound, Integer maxTurnLength,
+                         List<DebateParticipant> participants, LocalDateTime createdAt,
+                         LocalDateTime startedAt, LocalDateTime endedAt) {
         validateOwnerId(ownerId);
         validateTopicTitle(topicTitle);
         validateStatus(status);
@@ -47,9 +62,11 @@ public class DebateSession {
 
         this.id = id;
         this.ownerId = ownerId;
+        this.categoryId = categoryId;
         this.topicTitle = topicTitle;
         this.topicDescription = topicDescription;
         this.topicCategory = topicCategory;
+        this.visibility = Visibility.normalize(visibility);
         this.status = status;
         this.format = format;
         this.maxRounds = maxRounds;
@@ -69,8 +86,18 @@ public class DebateSession {
                                        Integer maxTurnLength,
                                        List<DebateParticipant> participants,
                                        LocalDateTime createdAt) {
-        return new DebateSession(null, ownerId, topicTitle, topicDescription, topicCategory,
-                DebateSessionStatus.CREATED, format, maxRounds, 0, maxTurnLength,
+        return create(ownerId, null, topicTitle, topicDescription, topicCategory,
+                DEFAULT_VISIBILITY, format, maxRounds, maxTurnLength, participants, createdAt);
+    }
+
+    public static DebateSession create(Long ownerId, Long categoryId, String topicTitle,
+                                       String topicDescription, String topicCategory,
+                                       String visibility, DebateFormat format, int maxRounds,
+                                       Integer maxTurnLength,
+                                       List<DebateParticipant> participants,
+                                       LocalDateTime createdAt) {
+        return new DebateSession(null, ownerId, categoryId, topicTitle, topicDescription, topicCategory,
+                visibility, DebateSessionStatus.CREATED, format, maxRounds, 0, maxTurnLength,
                 participants, createdAt, null, null);
     }
 

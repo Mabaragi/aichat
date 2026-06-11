@@ -3,10 +3,15 @@ spring:
     url: jdbc:sqlite:file:./target/aichat-test.db?mode=rwc
     driver-class-name: org.sqlite.JDBC
 
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    baseline-version: 1
+
   jpa:
     database-platform: org.hibernate.community.dialect.SQLiteDialect
     hibernate:
-      ddl-auto: create-drop
+      ddl-auto: update
     show-sql: false
 
 security:

@@ -1,5 +1,6 @@
 package com.example.aichat.debate.web;
 
+import com.example.aichat.category.web.CategorySummaryResponse;
 import com.example.aichat.debate.application.DebateParticipantView;
 import com.example.aichat.debate.application.DebateSessionView;
 import com.example.aichat.debate.domain.DebateFormat;
@@ -20,13 +21,18 @@ public record DebateSessionResponse(
         Long id,
         @Schema(description = "Owner user identifier.", example = "1")
         Long ownerId,
+        @Schema(description = "Debate category summary.")
+        CategorySummaryResponse category,
         @Schema(description = "Topic title.", example = "Sauce-first vs dip-first")
         String topicTitle,
         @Schema(description = "Topic description.",
                 example = "Which serving style creates the better eating experience?")
         String topicDescription,
-        @Schema(description = "Optional topic category.", example = "FOOD")
+        @Schema(description = "Optional topic category slug snapshot.", example = "food")
         String topicCategory,
+        @Schema(description = "Debate visibility.", allowableValues = {"PUBLIC", "PRIVATE"},
+                example = "PUBLIC")
+        String visibility,
         @Schema(description = "Current session status.", example = "CREATED")
         DebateSessionStatus status,
         @Schema(description = "Configured debate format.", example = "PROS_AND_CONS")
@@ -41,16 +47,24 @@ public record DebateSessionResponse(
         List<ParticipantResponse> participants,
         @Schema(description = "Timestamp when the session was created.",
                 example = "2026-06-10T12:00:00")
-        LocalDateTime createdAt
+        LocalDateTime createdAt,
+        @Schema(description = "Timestamp when the session was started.",
+                example = "2026-06-10T12:01:00")
+        LocalDateTime startedAt,
+        @Schema(description = "Timestamp when the session was completed.",
+                example = "2026-06-10T12:10:00")
+        LocalDateTime endedAt
 ) {
 
     public static DebateSessionResponse from(DebateSessionView view, ObjectMapper objectMapper) {
         return new DebateSessionResponse(
                 view.id(),
                 view.ownerId(),
+                CategorySummaryResponse.from(view.category()),
                 view.topicTitle(),
                 view.topicDescription(),
                 view.topicCategory(),
+                view.visibility(),
                 view.status(),
                 view.format(),
                 view.maxRounds(),
@@ -59,7 +73,9 @@ public record DebateSessionResponse(
                 view.participants().stream()
                         .map(participant -> ParticipantResponse.from(participant, objectMapper))
                         .toList(),
-                view.createdAt()
+                view.createdAt(),
+                view.startedAt(),
+                view.endedAt()
         );
     }
 

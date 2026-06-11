@@ -55,6 +55,7 @@ class CharacterJpaRepositoryTest extends CharacterRepositoryContractTest {
         assertThat(columnNames()).containsExactlyInAnyOrder(
                 "id",
                 "owner_id",
+                "category_id",
                 "name",
                 "description",
                 "personality",
@@ -133,6 +134,56 @@ class CharacterJpaRepositoryTest extends CharacterRepositoryContractTest {
     }
 
     @Test
+    void findPublicFiltersByVisibilityQueryAndCategory() {
+        Long expertCategoryId = categoryId("CHARACTER", "expert");
+        Long utilityCategoryId = categoryId("CHARACTER", "utility");
+
+        characterJpaRepository.saveAndFlush(sampleEntity(
+                null,
+                1L,
+                expertCategoryId,
+                "공개 미식가",
+                "탕수육 취향을 분석한다",
+                "{\"rationality\":90}",
+                "{\"tone\":\"calm\"}",
+                "PUBLIC",
+                DEFAULT_TIME,
+                DEFAULT_TIME
+        ));
+        characterJpaRepository.saveAndFlush(sampleEntity(
+                null,
+                1L,
+                utilityCategoryId,
+                "공개 도우미",
+                "일정을 정리한다",
+                null,
+                null,
+                "PUBLIC",
+                DEFAULT_TIME,
+                DEFAULT_TIME
+        ));
+        characterJpaRepository.saveAndFlush(sampleEntity(
+                null,
+                2L,
+                expertCategoryId,
+                "비공개 미식가",
+                "검색되어서는 안 된다",
+                null,
+                null,
+                "PRIVATE",
+                DEFAULT_TIME,
+                DEFAULT_TIME
+        ));
+
+        var result = repository.findPublic("미식가", expertCategoryId, 0, 20);
+
+        assertThat(result.totalElements()).isEqualTo(1);
+        assertThat(result.items())
+                .extracting(com.example.aichat.character.domain.Character::getName)
+                .containsExactly("공개 미식가");
+    }
+
+    @Test
     void saveWithExistingIdUpdatesPersistedRow() {
         CharacterJpaEntity saved = characterJpaRepository.saveAndFlush(sampleEntity());
         Long savedId = CharacterJpaEntityFields.id(saved);
@@ -190,10 +241,21 @@ class CharacterJpaRepositoryTest extends CharacterRepositoryContractTest {
                 .toList();
     }
 
+    private Long categoryId(String scope, String slug) {
+        return new JdbcTemplate(dataSource)
+                .queryForObject(
+                        "select id from categories where scope = ? and slug = ?",
+                        Long.class,
+                        scope,
+                        slug
+                );
+    }
+
     private static CharacterJpaEntity sampleEntity() {
         return sampleEntity(
                 null,
                 1L,
+                null,
                 "합리주의 미식가",
                 "논리적이고 차분하게 음식 취향을 분석하는 캐릭터",
                 "{\"rationality\":90}",
@@ -213,9 +275,34 @@ class CharacterJpaRepositoryTest extends CharacterRepositoryContractTest {
                                                    String visibility,
                                                    LocalDateTime createdAt,
                                                    LocalDateTime updatedAt) {
+        return sampleEntity(
+                id,
+                ownerId,
+                null,
+                name,
+                description,
+                personality,
+                speechStyle,
+                visibility,
+                createdAt,
+                updatedAt
+        );
+    }
+
+    private static CharacterJpaEntity sampleEntity(Long id,
+                                                   Long ownerId,
+                                                   Long categoryId,
+                                                   String name,
+                                                   String description,
+                                                   String personality,
+                                                   String speechStyle,
+                                                   String visibility,
+                                                   LocalDateTime createdAt,
+                                                   LocalDateTime updatedAt) {
         CharacterJpaEntity entity = new CharacterJpaEntity();
         CharacterJpaEntityFields.set(entity, "id", id);
         CharacterJpaEntityFields.set(entity, "ownerId", ownerId);
+        CharacterJpaEntityFields.set(entity, "categoryId", categoryId);
         CharacterJpaEntityFields.set(entity, "name", name);
         CharacterJpaEntityFields.set(entity, "description", description);
         CharacterJpaEntityFields.set(entity, "personality", personality);

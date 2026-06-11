@@ -7,6 +7,7 @@ import com.example.aichat.common.security.RequestActor;
 public record CreateCharacterCommand(
         RequestActor actor,
         Long ownerId,
+        String category,
         String name,
         String description,
         Personality personality,
@@ -16,7 +17,7 @@ public record CreateCharacterCommand(
     public CreateCharacterCommand(Long ownerId, String name, String description,
                                   Personality personality, SpeechStyle speechStyle,
                                   String visibility) {
-        this(RequestActor.system(), ownerId, name, description,
+        this(RequestActor.system(), ownerId, null, name, description,
                 personality, speechStyle, visibility);
     }
 }

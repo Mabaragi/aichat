@@ -19,6 +19,10 @@ public record CreateDebateSessionRequest(
         @NotNull @Valid TopicRequest topic,
         @Schema(description = "Debate format.", example = "PROS_AND_CONS")
         @NotNull DebateFormat format,
+        @Schema(description = "Debate visibility. PUBLIC sessions appear in the public catalog after completion.",
+                allowableValues = {"PUBLIC", "PRIVATE"},
+                example = "PUBLIC")
+        String visibility,
         @Schema(description = "Maximum number of rounds.", example = "5")
         @Min(1) @Max(10) int maxRounds,
         @Schema(description = "Maximum length of each generated turn in characters.",
@@ -45,7 +49,8 @@ public record CreateDebateSessionRequest(
             @Schema(description = "Topic description.",
                     example = "Which serving style creates the better eating experience?")
             @NotBlank String description,
-            @Schema(description = "Optional topic category.", example = "FOOD")
+            @Schema(description = "Topic category slug. Defaults to other when omitted.",
+                    example = "food")
             String category
     ) {
     }

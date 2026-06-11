@@ -46,7 +46,8 @@ MVP에서 구현할 기능은 다음과 같다.
 - 토론 세션 조회
 - 토론 세션 완료
 - 생성된 토론 내용 저장
-- 간단한 공유용 공개 링크 생성
+- 공개 토론/공개 캐릭터 탐색
+- 토론/캐릭터 카테고리 기반 필터링
 
 ### 4.2 제외 범위
 
@@ -149,6 +150,7 @@ MVP에서는 이메일/비밀번호 회원가입과 Bearer JWT 인증을 사용�
 - 성격 설정 보관
 - 말투 설정 보관
 - 공개 여부 관리
+- 공개 탐색용 카테고리 연결
 
 ### 7.3 DebateSession
 
@@ -163,6 +165,8 @@ MVP의 핵심 Aggregate Root다.
 - 참가자 목록 관리
 - 현재 라운드 관리
 - 토론 종료 조건 관리
+- 공개 여부 관리
+- 공개 탐색용 카테고리 연결
 
 ### 7.4 DebateParticipant
 
@@ -192,19 +196,34 @@ MVP의 핵심 Aggregate Root다.
 - 생성 당시 프롬프트와 모델 정보 저장
 - 토큰 사용량 저장
 
-### 7.6 SavedScene
+### 7.6 Category
+
+공개 탐색에서 토론과 캐릭터를 분류하는 기준이다.
+
+카테고리는 enum이 아니라 DB 테이블로 관리한다. MVP에서는 관리자 CRUD를 만들지 않고
+Flyway seed로 초기 값을 넣는다. 요청은 안정적인 `slug`를 받고, 응답은 `{ id, scope,
+slug, name }` summary를 내려준다.
+
+초기 scope:
+
+- `DEBATE`: `food`, `culture`, `tech`, `life`, `society`, `fun`, `other`
+- `CHARACTER`: `expert`, `critic`, `creator`, `storyteller`, `comedy`, `utility`, `other`
+
+### 7.7 SavedScene
 
 사용자가 특정 토론 구간을 저장한 것이다.
 
 MVP에서는 최소 필드만 둔다.
 
-### 7.7 SharedContent
+### 7.8 SharedContent
 
 공개 공유 링크를 위한 모델이다.
 
-MVP에서는 토론 세션 하나를 공개 링크로 공유하는 정도만 지원한다.
+현재 MVP의 공개 노출은 별도 공유 링크보다 `DebateSession.visibility=PUBLIC`과
+`status=COMPLETED` 조건의 공개 탐색 API를 우선한다. slug 기반 공유 링크는 이후 확장
+모델로 남긴다.
 
-### 7.8 UserIntervention
+### 7.9 UserIntervention
 
 사용자 개입 기능을 위한 확장 모델이다.
 
@@ -234,13 +253,15 @@ MVP에서는 실제 기능 구현을 미뤄도 되지만, 향후 확장을 위�
 | ownerId | Long | 소유자 ID |
 | name | String | 캐릭터 이름 |
 | description | String | 캐릭터 설명 |
+| categoryId | Long | 캐릭터 카테고리 ID |
 | personality | String 또는 JSON | 성격 설정 |
 | speechStyle | String 또는 JSON | 말투 설정 |
 | visibility | String | 공개 여부 |
 | createdAt | LocalDateTime | 생성일 |
 | updatedAt | LocalDateTime | 수정일 |
 
-현재 코드의 `Character` 클래스는 위 목표 필드 중 `personality`를 아직 저장하지 않는다. 생성 팩토리 인자로는 `personality`를 받지만 객체 필드에 반영되지 않으므로, MVP 구현 시 `personality` 저장 필드를 추가하거나 명세에서 제외하는 결정을 해야 한다.
+캐릭터 생성/수정 요청은 `category` slug를 받는다. 저장소에는 `categoryId`를 보관하고,
+기존 데이터나 누락된 요청은 `CHARACTER/other` 카테고리로 이관한다.
 
 ### personality 예시
 
@@ -274,7 +295,9 @@ MVP에서는 실제 기능 구현을 미뤄도 되지만, 향후 확장을 위�
 | ownerId | Long | 생성자 ID |
 | topicTitle | String | 토론 주제 |
 | topicDescription | String | 주제 설명 |
-| topicCategory | String | 주제 카테고리 |
+| categoryId | Long | 토론 카테고리 ID |
+| topicCategory | String | 주제 카테고리 slug snapshot |
+| visibility | String | 공개 여부 |
 | status | String | 세션 상태 |
 | format | String | 토론 형식 |
 | maxRounds | Integer | 최대 라운드 |
@@ -433,17 +456,32 @@ CREATE TABLE refresh_tokens (
     FOREIGN KEY (user_id) REFERENCES users(id)
 );
 
+CREATE TABLE categories (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    scope TEXT NOT NULL,
+    slug TEXT NOT NULL,
+    name TEXT NOT NULL,
+    description TEXT,
+    display_order INTEGER NOT NULL,
+    active INTEGER NOT NULL,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    UNIQUE (scope, slug)
+);
+
 CREATE TABLE characters (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     owner_id INTEGER NOT NULL,
     name TEXT NOT NULL,
     description TEXT,
+    category_id INTEGER,
     personality TEXT,
     speech_style TEXT,
     visibility TEXT NOT NULL,
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL,
-    FOREIGN KEY (owner_id) REFERENCES users(id)
+    FOREIGN KEY (owner_id) REFERENCES users(id),
+    FOREIGN KEY (category_id) REFERENCES categories(id)
 );
 
 CREATE TABLE debate_sessions (
@@ -452,6 +490,8 @@ CREATE TABLE debate_sessions (
     topic_title TEXT NOT NULL,
     topic_description TEXT,
     topic_category TEXT,
+    category_id INTEGER,
+    visibility TEXT NOT NULL,
     status TEXT NOT NULL,
     format TEXT NOT NULL,
     max_rounds INTEGER NOT NULL,
@@ -460,7 +500,8 @@ CREATE TABLE debate_sessions (
     created_at TEXT NOT NULL,
     started_at TEXT,
     ended_at TEXT,
-    FOREIGN KEY (owner_id) REFERENCES users(id)
+    FOREIGN KEY (owner_id) REFERENCES users(id),
+    FOREIGN KEY (category_id) REFERENCES categories(id)
 );
 
 CREATE TABLE debate_participants (
@@ -519,8 +560,8 @@ CREATE TABLE shared_contents (
 );
 ```
 
-MVP에서는 JPA `ddl-auto=update`로 시작해도 된다.
-다만 기능이 안정되면 Flyway를 도입하는 것이 좋다.
+현재 backend는 Flyway migration으로 `categories` seed와 공개 탐색용 컬럼을 관리한다.
+JPA `ddl-auto=update`는 SQLite MVP의 보조 스키마 갱신 경로로만 유지한다.
 
 ---
 
@@ -529,8 +570,9 @@ MVP에서는 JPA `ddl-auto=update`로 시작해도 된다.
 이 문서는 MVP 목표 명세와 구현 방향을 함께 기록한다. 현재 저장소는 전체 MVP가 완성된 상태는 아니지만 User, Character, DebateSession 생성과 turn 생성/조회, session lifecycle의 핵심 흐름은 실제 동작한다.
 
 - Spring Boot backend는 `backend/`에 있으며, 해당 디렉터리에 `pom.xml`, `mvnw`, `mvnw.cmd`가 있다.
-- Next.js frontend와 BFF는 `frontend/`에 있으며, 회원가입·로그인·로그아웃, 내 정보,
-  캐릭터 목록·생성, 토론 세션 생성과 생성 결과 확인 화면을 제공한다.
+- Next.js frontend와 BFF는 `frontend/`에 있으며, 루트 `/`에서 공개 토론·공개 캐릭터를
+  탐색하고 `/login`에서 인증한다. 로그인 후 캐릭터 목록·생성, 토론 세션 생성, 시작,
+  턴 생성, 완료 흐름을 제공한다.
 - 브라우저는 Next Route Handler만 호출한다. access/refresh JWT는 HttpOnly cookie에
   저장하며 브라우저 JavaScript와 인증 응답 JSON에 노출하지 않는다.
 - frontend TypeScript API type은 `docs/api/openapi.json`에서 생성하고 CI에서 drift를
@@ -538,9 +580,14 @@ MVP에서는 JPA `ddl-auto=update`로 시작해도 된다.
 - 기준 패키지는 `com.example.aichat`이다.
 - 설정 파일은 `backend/src/main/resources/application.yaml`이며, backend current directory 기준 SQLite 데이터베이스 `./data/ai-debate.db`를 사용한다.
 - `User` 생성과 JPA 저장, `Character` CRUD와 JPA 저장이 구현되어 있다.
+- `Category`는 `DEBATE`, `CHARACTER` scope의 DB 테이블과 Flyway seed로 관리한다.
 - `POST /api/debate-sessions`는 사용자와 캐릭터를 검증하고 캐릭터 스냅샷 기반 참가자 2명을 포함한 세션을 SQLite에 저장한다.
 - `DebateSession`은 participant를 소유하는 aggregate root이며 별도 `DebateParticipantRepository`를 두지 않는다.
 - `POST /api/debate-sessions/{sessionId}/start`, `POST /api/debate-sessions/{sessionId}/complete`, `POST /api/debate-sessions/{sessionId}/turns/generate`, `GET /api/debate-sessions/{sessionId}/turns`가 구현되어 있다.
+- 공개 API는 `GET /api/public/categories`, `GET /api/public/debate-sessions`,
+  `GET /api/public/debate-sessions/{sessionId}`, `GET /api/public/debate-sessions/{sessionId}/turns`,
+  `GET /api/public/characters`, `GET /api/public/characters/{characterId}`를 제공한다.
+  공개 토론은 `visibility=PUBLIC AND status=COMPLETED` 조건만 노출한다.
 - 토론 프롬프트 정책은 `debate.domain.DebateTurnPromptBuilder`가 담당한다. 공용 생성 계약은 `generation.application`의 `TextGenerator`, `GenerationRequest`, `GenerationResult`로 구성되고, `generation.infrastructure.MockTextGenerator`가 deterministic mock 응답을 제공한다. `generation.infrastructure`는 Spring `@ConfigurationProperties` 기반 provider wiring을 사용해 `GENERATION_PROVIDER`와 API key env를 주입한다.
 - `OpenAiTextGenerator`와 `GeminiTextGenerator` provider adapter 및 단위 테스트가 구현되어 있다. provider 선택 설정과 `GenerateDebateTurnUseCase` orchestration 연결도 구현되어 있다.
 - HTTP API는 Bearer JWT 인증을 사용하며 Character와 DebateSession 생성의 소유자는 access token의 `sub`에서 결정한다.
@@ -776,6 +823,9 @@ web
 /api/characters
 /api/debate-sessions
 /api/debate-sessions/{sessionId}/turns
+/api/public/categories
+/api/public/characters
+/api/public/debate-sessions
 ```
 
 ## 14.1 User API
@@ -843,6 +893,7 @@ Request:
 ```json
 {
   "name": "합리주의 미식가",
+  "category": "expert",
   "description": "논리적이고 차분하게 음식 취향을 분석하는 캐릭터",
   "personality": {
     "rationality": 90,
@@ -867,6 +918,23 @@ Response:
   "ownerId": 1,
   "name": "합리주의 미식가",
   "description": "논리적이고 차분하게 음식 취향을 분석하는 캐릭터",
+  "category": {
+    "id": 8,
+    "scope": "CHARACTER",
+    "slug": "expert",
+    "name": "전문가"
+  },
+  "personality": {
+    "rationality": 90,
+    "aggressiveness": 20,
+    "humor": 30,
+    "empathy": 50
+  },
+  "speechStyle": {
+    "tone": "차분함",
+    "formality": "높음",
+    "sentenceStyle": "논리적이고 간결함"
+  },
   "visibility": "PRIVATE",
   "createdAt": "2026-06-05T12:00:00"
 }
@@ -919,9 +987,10 @@ Request:
   "topic": {
     "title": "부먹 vs 찍먹",
     "description": "탕수육 소스를 부어 먹는 것과 찍어 먹는 것 중 어느 방식이 더 나은가?",
-    "category": "FOOD"
+    "category": "food"
   },
   "format": "PROS_AND_CONS",
+  "visibility": "PUBLIC",
   "maxRounds": 5,
   "maxTurnLength": 600,
   "participants": [
@@ -948,7 +1017,16 @@ Response:
   "id": 1,
   "ownerId": 1,
   "topicTitle": "부먹 vs 찍먹",
+  "topicDescription": "탕수육 소스를 부어 먹는 것과 찍어 먹는 것 중 어느 방식이 더 나은가?",
+  "topicCategory": "food",
+  "category": {
+    "id": 1,
+    "scope": "DEBATE",
+    "slug": "food",
+    "name": "음식"
+  },
   "status": "CREATED",
+  "visibility": "PUBLIC",
   "format": "PROS_AND_CONS",
   "maxRounds": 5,
   "currentRound": 0,
@@ -1092,7 +1170,56 @@ Response:
 
 ---
 
-## 14.5 Share API
+## 14.5 Public Discovery API
+
+공개 탐색 API는 인증 없이 호출한다. 카테고리 필터는 `slug`를 받으며, 존재하지 않거나
+비활성화된 카테고리는 `404 CATEGORY_NOT_FOUND`로 처리한다.
+
+```http
+GET /api/public/categories?scope=DEBATE
+GET /api/public/categories?scope=CHARACTER
+```
+
+Response:
+
+```json
+[
+  {
+    "id": 1,
+    "scope": "DEBATE",
+    "slug": "food",
+    "name": "음식"
+  }
+]
+```
+
+```http
+GET /api/public/debate-sessions?page=0&size=20&query=탕수육&category=food
+GET /api/public/debate-sessions/{sessionId}
+GET /api/public/debate-sessions/{sessionId}/turns
+GET /api/public/characters?page=0&size=20&query=미식가&category=expert
+GET /api/public/characters/{characterId}
+```
+
+공개 토론 목록과 상세는 `visibility=PUBLIC AND status=COMPLETED`인 세션만 반환한다.
+공개 캐릭터 목록과 상세는 `visibility=PUBLIC`인 캐릭터만 반환한다.
+
+목록 응답 shape:
+
+```json
+{
+  "items": [],
+  "page": 0,
+  "size": 20,
+  "totalElements": 0,
+  "totalPages": 0,
+  "hasNext": false
+}
+```
+
+---
+
+## 14.6 Share API
 
 ### 공유 링크 생성
 
@@ -1350,6 +1477,8 @@ MVP에서는 동기 생성이면 바로 `COMPLETED`로 저장해도 된다.
 - `CREATED` 상태의 세션만 시작할 수 있다.
 - `RUNNING` 상태의 세션만 발화를 생성할 수 있다.
 - 최대 라운드에 도달하면 세션은 `COMPLETED`가 된다.
+- 토론 생성 요청의 `topic.category`는 활성 `DEBATE` 카테고리 slug여야 한다.
+- 공개 탐색에는 `visibility=PUBLIC`이고 `status=COMPLETED`인 세션만 노출한다.
 
 ### 19.2 Character 규칙
 
@@ -1358,6 +1487,8 @@ MVP에서는 동기 생성이면 바로 `COMPLETED`로 저장해도 된다.
 - description은 1000자 이하로 제한한다.
 - personality와 speechStyle은 JSON 문자열로 저장한다.
 - ownerId는 필수다.
+- 캐릭터 생성/수정 요청의 `category`는 활성 `CHARACTER` 카테고리 slug여야 한다.
+- 공개 캐릭터 탐색에는 `visibility=PUBLIC`인 캐릭터만 노출한다.
 
 ### 19.3 DebateParticipant 규칙
 
@@ -1401,6 +1532,7 @@ INVALID_TOKEN
 REFRESH_TOKEN_REUSED
 UNAUTHORIZED
 CHARACTER_NOT_FOUND
+CATEGORY_NOT_FOUND
 DEBATE_SESSION_NOT_FOUND
 DEBATE_PARTICIPANT_NOT_FOUND
 INVALID_SESSION_STATE
@@ -1432,6 +1564,8 @@ SHARED_CONTENT_NOT_FOUND
 - 다른 사용자의 `PRIVATE` 캐릭터와 존재하지 않는 캐릭터는 거부한다.
 - 같은 캐릭터를 서로 다른 모델로 두 번 선택할 수 있다.
 - 원본 캐릭터가 변경돼도 참가자 스냅샷은 유지된다.
+- 활성 `DEBATE` 카테고리 slug만 선택할 수 있다.
+- 공개 토론 목록은 `PUBLIC + COMPLETED` 세션만 반환한다.
 
 #### DebateTurn 생성 유스케이스 테스트
 
@@ -1447,6 +1581,8 @@ SHARED_CONTENT_NOT_FOUND
 - 캐릭터 이름이 없으면 생성할 수 없다.
 - ownerId가 없으면 생성할 수 없다.
 - 캐릭터를 생성하면 ownerId와 연결된다.
+- 활성 `CHARACTER` 카테고리 slug만 선택할 수 있다.
+- 공개 캐릭터 목록은 `PUBLIC` 캐릭터만 반환하고 query/category/page를 적용한다.
 
 ### 21.2 테스트 우선순위
 

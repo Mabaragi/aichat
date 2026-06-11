@@ -9,6 +9,7 @@ import com.example.aichat.debate.application.ListDebateTurnsUseCase;
 import com.example.aichat.debate.application.DebateTurnView;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -101,7 +102,8 @@ public class DebateTurnController {
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Debate turn list returned.",
                     content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
-                            schema = @Schema(implementation = DebateTurnResponse.class))),
+                            array = @ArraySchema(schema = @Schema(
+                                    implementation = DebateTurnResponse.class)))),
             @ApiResponse(responseCode = "401", description = "Authentication is required.",
                     content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
                             schema = @Schema(implementation = ErrorResponse.class))),

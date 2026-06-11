@@ -1,5 +1,9 @@
 package com.example.aichat.debate.application;
 
+import com.example.aichat.category.application.CategoryResolver;
+import com.example.aichat.category.domain.Category;
+import com.example.aichat.category.domain.CategoryRepository;
+import com.example.aichat.category.domain.CategoryScope;
 import com.example.aichat.character.domain.Character;
 import com.example.aichat.character.domain.CharacterRepository;
 import com.example.aichat.character.domain.Personality;
@@ -16,6 +20,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.time.LocalDateTime;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -43,6 +48,7 @@ class CreateDebateSessionUseCaseTest {
                 userRepository,
                 characterRepository,
                 debateSessionRepository,
+                categoryResolver(),
                 () -> FIXED_TIME
         );
         userRepository.add(new User(
@@ -247,5 +253,37 @@ class CreateDebateSessionUseCaseTest {
         public Optional<DebateSession> findById(Long sessionId) {
             return Optional.ofNullable(sessions.get(sessionId));
         }
+    }
+
+    private static CategoryResolver categoryResolver() {
+        Category food = new Category(
+                200L,
+                CategoryScope.DEBATE,
+                "food",
+                "음식",
+                null,
+                10,
+                true,
+                FIXED_TIME,
+                FIXED_TIME
+        );
+        return new CategoryResolver(new CategoryRepository() {
+            @Override
+            public List<Category> findActiveByScope(CategoryScope scope) {
+                return scope == CategoryScope.DEBATE ? List.of(food) : List.of();
+            }
+
+            @Override
+            public Optional<Category> findActiveByScopeAndSlug(CategoryScope scope, String slug) {
+                return scope == CategoryScope.DEBATE && "food".equals(slug)
+                        ? Optional.of(food)
+                        : Optional.empty();
+            }
+
+            @Override
+            public List<Category> findByIds(Collection<Long> categoryIds) {
+                return categoryIds.contains(food.getId()) ? List.of(food) : List.of();
+            }
+        });
     }
 }

@@ -1,36 +1,37 @@
 "use client";
 
-import { AuthPanel } from "@/components/AuthPanel";
 import { CharacterPanel } from "@/components/CharacterPanel";
 import { DebateComposer } from "@/components/DebateComposer";
 import type {
+  Category,
   Character,
-  PlatformCategory,
-  PlatformDebateCard,
+  DebateSession,
+  PublicCharacterPage,
+  PublicDebatePage,
   User,
   WorkspaceData,
 } from "@/lib/api-types";
-import { bffFetch, workspaceFetcher } from "@/lib/bff-fetch";
-import {
-  characterSpotlights,
-  platformCategories,
-  platformDebates,
-  recentPublicSessions,
-} from "@/lib/platform-mock";
-import type { CSSProperties } from "react";
-import { useDeferredValue, useState, useTransition } from "react";
+import { bffFetch, readJson, workspaceFetcher } from "@/lib/bff-fetch";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { FormEvent, useDeferredValue, useMemo, useState, useTransition } from "react";
 import useSWR from "swr";
 
-const FEATURED_DEBATE = platformDebates[0];
+type Resource = "debates" | "characters";
+
+const ALL_CATEGORY = "all";
 
 export function WorkspaceApp() {
-  const [activeCategory, setActiveCategory] = useState("all");
-  const [authOpen, setAuthOpen] = useState(false);
+  const router = useRouter();
+  const [resource, setResource] = useState<Resource>("debates");
+  const [query, setQuery] = useState("");
+  const [debateCategory, setDebateCategory] = useState(ALL_CATEGORY);
+  const [characterCategory, setCharacterCategory] = useState(ALL_CATEGORY);
   const [studioOpen, setStudioOpen] = useState(false);
-  const [isCategoryPending, startCategoryTransition] = useTransition();
-  const deferredCategory = useDeferredValue(activeCategory);
+  const [isPending, startTransition] = useTransition();
+  const deferredQuery = useDeferredValue(query.trim());
 
-  const { data, error, isLoading, mutate } = useSWR<WorkspaceData>(
+  const { data: workspace, error: workspaceError, mutate } = useSWR<WorkspaceData>(
     "/api/workspace",
     workspaceFetcher,
     {
@@ -38,34 +39,70 @@ export function WorkspaceApp() {
       revalidateOnFocus: false,
     },
   );
+  const { data: debateCategories = [] } = useSWR<Category[]>(
+    "/api/public/categories?scope=DEBATE",
+    jsonFetcher,
+  );
+  const { data: characterCategories = [] } = useSWR<Category[]>(
+    "/api/public/categories?scope=CHARACTER",
+    jsonFetcher,
+  );
 
-  const isAuthenticated = Boolean(data && !error);
-  const selectedCategory =
-    platformCategories.find((category) => category.id === deferredCategory) ??
-    platformCategories[0];
-  const visibleDebates =
-    deferredCategory === "all"
-      ? platformDebates
-      : platformDebates.filter((debate) => debate.categoryId === deferredCategory);
+  const selectedDebateCategory =
+    debateCategory === ALL_CATEGORY ? undefined : debateCategory;
+  const selectedCharacterCategory =
+    characterCategory === ALL_CATEGORY ? undefined : characterCategory;
+  const debateListUrl = publicListUrl(
+    "/api/public/debate-sessions",
+    deferredQuery,
+    selectedDebateCategory,
+  );
+  const characterListUrl = publicListUrl(
+    "/api/public/characters",
+    deferredQuery,
+    selectedCharacterCategory,
+  );
 
-  function selectCategory(categoryId: string) {
-    startCategoryTransition(() => {
-      setActiveCategory(categoryId);
+  const { data: debatePage, isLoading: debatesLoading } = useSWR<PublicDebatePage>(
+    debateListUrl,
+    jsonFetcher,
+    { keepPreviousData: true },
+  );
+  const { data: characterPage, isLoading: charactersLoading } =
+    useSWR<PublicCharacterPage>(characterListUrl, jsonFetcher, {
+      keepPreviousData: true,
+    });
+
+  const isAuthenticated = Boolean(workspace && !workspaceError);
+  const activeCategories = resource === "debates" ? debateCategories : characterCategories;
+  const activeCategory = resource === "debates" ? debateCategory : characterCategory;
+  const activePage = resource === "debates" ? debatePage : characterPage;
+  const activeLoading = resource === "debates" ? debatesLoading : charactersLoading;
+
+  const categoryDescription = useMemo(() => {
+    if (activeCategory === ALL_CATEGORY) {
+      return resource === "debates"
+        ? "완료된 공개 토론 전체"
+        : "공개 캐릭터 전체";
+    }
+    return activeCategories.find((category) => category.slug === activeCategory)?.name ?? "선택됨";
+  }, [activeCategories, activeCategory, resource]);
+
+  function updateQuery(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const data = new FormData(form);
+    startTransition(() => {
+      setQuery(String(data.get("query") ?? ""));
     });
   }
 
   function openStudio() {
     if (!isAuthenticated) {
-      setAuthOpen(true);
+      router.push("/login");
       return;
     }
     setStudioOpen(true);
-  }
-
-  function handleAuthenticated(user: User) {
-    setAuthOpen(false);
-    setStudioOpen(true);
-    void mutate({ user, characters: [] }, { revalidate: true });
   }
 
   function handleCharacterCreated(character: Character) {
@@ -91,65 +128,91 @@ export function WorkspaceApp() {
   return (
     <main className="platform-shell">
       <TopNavigation
+        user={workspace?.user}
         isAuthenticated={isAuthenticated}
-        user={data?.user}
-        onLogin={() => setAuthOpen(true)}
+        onLogin={() => router.push("/login")}
         onOpenStudio={openStudio}
       />
 
-      <HeroSection
-        featuredDebate={FEATURED_DEBATE}
-        isAuthenticated={isAuthenticated}
-        isLoading={isLoading}
-        onPrimaryAction={openStudio}
-      />
+      <section className="arena-heading">
+        <div className="geometric-shape shape-one" />
+        <div className="geometric-shape shape-two" />
+        <p className="eyebrow">PUBLIC ARENA</p>
+        <h1>완료된 AI 토론과 공개 캐릭터를 바로 탐색합니다.</h1>
+        <p>
+          검색어와 카테고리로 공개된 결과만 좁혀보고, 로그인하면 같은 화면에서
+          내 캐릭터와 토론을 만들 수 있습니다.
+        </p>
+      </section>
 
-      <CategoryRail
-        categories={platformCategories}
-        activeCategory={activeCategory}
-        isPending={isCategoryPending}
-        onSelect={selectCategory}
-      />
-
-      <section className="content-grid" aria-labelledby="catalog-title">
-        <div className="catalog-column">
-          <header className="section-title-row">
-            <div>
-              <p className="eyebrow">ARENA CATALOG</p>
-              <h2 id="catalog-title">{selectedCategory.label} 토론</h2>
-            </div>
-            <p>{selectedCategory.description}</p>
-          </header>
-
-          <DebateGrid debates={visibleDebates} onStart={openStudio} />
+      <section className="explorer-panel" aria-label="공개 탐색">
+        <div className="explorer-tools">
+          <ResourceTabs resource={resource} onChange={setResource} />
+          <form className="search-bar" onSubmit={updateQuery}>
+            <input
+              name="query"
+              defaultValue={query}
+              placeholder={
+                resource === "debates"
+                  ? "토론 제목, 설명, 참가자 이름 검색"
+                  : "캐릭터 이름 또는 설명 검색"
+              }
+            />
+            <button className="primary-button" type="submit" disabled={isPending}>
+              검색
+            </button>
+          </form>
         </div>
 
-        <aside className="platform-sidebar" aria-label="추천 캐릭터와 최근 세션">
-          <SpotlightCharacters onCreate={openStudio} />
-          <RecentSessions sessions={recentPublicSessions} onStart={openStudio} />
-        </aside>
+        <CategoryRail
+          categories={activeCategories}
+          activeCategory={activeCategory}
+          onSelect={(slug) =>
+            resource === "debates"
+              ? setDebateCategory(slug)
+              : setCharacterCategory(slug)
+          }
+        />
+
+        <header className="section-title-row">
+          <div>
+            <p className="eyebrow">{resource === "debates" ? "DEBATES" : "CHARACTERS"}</p>
+            <h2>{categoryDescription}</h2>
+          </div>
+          <p>
+            {activeLoading
+              ? "불러오는 중"
+              : `${activePage?.totalElements ?? 0}개의 공개 항목`}
+          </p>
+        </header>
+
+        {resource === "debates" ? (
+          <DebateCatalog debates={debatePage?.items ?? []} onCreate={openStudio} />
+        ) : (
+          <CharacterCatalog characters={characterPage?.items ?? []} onCreate={openStudio} />
+        )}
       </section>
 
       <section className="studio-band" aria-labelledby="studio-title">
         <div>
-          <p className="eyebrow">MAKE YOUR ARENA</p>
-          <h2 id="studio-title">내 캐릭터로 바로 토론을 열어보세요.</h2>
+          <p className="eyebrow">MY STUDIO</p>
+          <h2 id="studio-title">내 캐릭터로 공개될 수 있는 토론을 만듭니다.</h2>
           <p>
-            공개 카탈로그는 지금은 하드코딩된 샘플입니다. 실제 생성은 로그인한
-            사용자의 캐릭터와 기존 백엔드 API를 사용합니다.
+            PUBLIC 토론은 완료된 뒤 공개 목록에 노출됩니다. 생성 직후에는 내
+            작업공간에서만 이어서 진행합니다.
           </p>
         </div>
         <button className="primary-button" type="button" onClick={openStudio}>
-          {isAuthenticated ? "제작 스튜디오 열기" : "로그인하고 시작하기"}
+          {isAuthenticated ? "제작 스튜디오 열기" : "로그인하고 만들기"}
         </button>
       </section>
 
-      {studioOpen && data ? (
+      {studioOpen && workspace ? (
         <section className="studio-panel" aria-label="제작 스튜디오">
           <div className="studio-panel-header">
             <div>
-              <p className="eyebrow">MY STUDIO</p>
-              <h2>{data.user.nickname ?? "토론가"}님의 제작 공간</h2>
+              <p className="eyebrow">SIGNED IN</p>
+              <h2>{workspace.user.nickname ?? "토론가"}님의 작업공간</h2>
             </div>
             <button
               className="ghost-button"
@@ -161,57 +224,47 @@ export function WorkspaceApp() {
           </div>
           <div className="studio-layout">
             <CharacterPanel
-              user={data.user}
-              characters={data.characters}
+              user={workspace.user}
+              characters={workspace.characters}
+              categories={characterCategories}
               onCreated={handleCharacterCreated}
               onLogout={handleLogout}
             />
-            <DebateComposer characters={data.characters} />
+            <DebateComposer
+              characters={workspace.characters}
+              categories={debateCategories}
+            />
           </div>
         </section>
-      ) : null}
-
-      {authOpen ? (
-        <div className="auth-overlay" role="dialog" aria-modal="true">
-          <button
-            className="auth-backdrop"
-            type="button"
-            aria-label="인증 창 닫기"
-            onClick={() => setAuthOpen(false)}
-          />
-          <AuthPanel
-            onAuthenticated={handleAuthenticated}
-            onCancel={() => setAuthOpen(false)}
-          />
-        </div>
       ) : null}
     </main>
   );
 }
 
 type TopNavigationProps = {
-  isAuthenticated: boolean;
   user: User | undefined;
+  isAuthenticated: boolean;
   onLogin: () => void;
   onOpenStudio: () => void;
 };
 
 function TopNavigation({
-  isAuthenticated,
   user,
+  isAuthenticated,
   onLogin,
   onOpenStudio,
 }: TopNavigationProps) {
   return (
     <header className="top-navigation">
-      <a className="brand-mark" href="#top" aria-label="AI Debate Arena 홈">
+      <Link className="brand-mark" href="/" aria-label="AI Debate Arena 홈">
         <span>AI</span>
         Debate Arena
-      </a>
+      </Link>
       <nav aria-label="주요 메뉴">
-        <a href="#catalog-title">토론 둘러보기</a>
-        <a href="#studio-title">만들기</a>
-        <a href="#characters">캐릭터</a>
+        <a href="#public-list">공개 탐색</a>
+        <button type="button" onClick={onOpenStudio}>
+          만들기
+        </button>
       </nav>
       <div className="nav-actions">
         {isAuthenticated ? (
@@ -222,189 +275,185 @@ function TopNavigation({
           type="button"
           onClick={isAuthenticated ? onOpenStudio : onLogin}
         >
-          {isAuthenticated ? "내 스튜디오" : "로그인"}
+          {isAuthenticated ? "내 작업공간" : "로그인"}
         </button>
       </div>
     </header>
   );
 }
 
-type HeroSectionProps = {
-  featuredDebate: PlatformDebateCard;
-  isAuthenticated: boolean;
-  isLoading: boolean;
-  onPrimaryAction: () => void;
-};
-
-function HeroSection({
-  featuredDebate,
-  isAuthenticated,
-  isLoading,
-  onPrimaryAction,
-}: HeroSectionProps) {
+function ResourceTabs({
+  resource,
+  onChange,
+}: {
+  resource: Resource;
+  onChange: (resource: Resource) => void;
+}) {
   return (
-    <section className="hero-section" id="top">
-      <div className="hero-copy">
-        <p className="eyebrow">PUBLIC DEBATE CATALOG</p>
-        <h1>AI 캐릭터들이 대신 끝까지 싸워주는 토론 놀이터.</h1>
-        <p>
-          인기 주제를 훑고, 마음에 드는 캐릭터를 고르고, 내 관점까지 섞어
-          새로운 토론 세션을 만들 수 있습니다.
-        </p>
-        <div className="hero-actions">
-          <button className="primary-button" type="button" onClick={onPrimaryAction}>
-            {isAuthenticated ? "토론 만들기" : "무료로 둘러보고 시작"}
-          </button>
-          <span>{isLoading ? "세션 확인 중" : "로그인 없이도 탐색 가능"}</span>
-        </div>
-      </div>
-
-      <article className="hero-feature" aria-label="대표 추천 토론">
-        <span className="status-pill">{featuredDebate.status}</span>
-        <div className="feature-orb" style={accentStyle(featuredDebate.accent)} />
-        <p>{featuredDebate.categoryLabel}</p>
-        <h2>{featuredDebate.title}</h2>
-        <p>{featuredDebate.description}</p>
-        <div className="participant-strip">
-          {featuredDebate.participants.map((participant, index) => (
-            <span key={participant}>
-              {participant}
-              <small>{featuredDebate.models[index]}</small>
-            </span>
-          ))}
-        </div>
-        <StatLine stats={featuredDebate.stats} />
-      </article>
-    </section>
+    <div className="resource-tabs" role="tablist" aria-label="탐색 대상">
+      <button
+        type="button"
+        role="tab"
+        aria-selected={resource === "debates"}
+        className={resource === "debates" ? "active" : ""}
+        onClick={() => onChange("debates")}
+      >
+        공개 토론
+      </button>
+      <button
+        type="button"
+        role="tab"
+        aria-selected={resource === "characters"}
+        className={resource === "characters" ? "active" : ""}
+        onClick={() => onChange("characters")}
+      >
+        공개 캐릭터
+      </button>
+    </div>
   );
 }
-
-type CategoryRailProps = {
-  categories: PlatformCategory[];
-  activeCategory: string;
-  isPending: boolean;
-  onSelect: (categoryId: string) => void;
-};
 
 function CategoryRail({
   categories,
   activeCategory,
-  isPending,
   onSelect,
-}: CategoryRailProps) {
+}: {
+  categories: Category[];
+  activeCategory: string;
+  onSelect: (slug: string) => void;
+}) {
   return (
-    <section className="category-rail" aria-label="토론 카테고리">
+    <section className="category-rail" aria-label="카테고리">
+      <button
+        className={activeCategory === ALL_CATEGORY ? "active" : ""}
+        type="button"
+        onClick={() => onSelect(ALL_CATEGORY)}
+      >
+        전체
+      </button>
       {categories.map((category) => (
         <button
-          key={category.id}
-          className={category.id === activeCategory ? "active" : ""}
+          key={category.id ?? category.slug}
+          className={category.slug === activeCategory ? "active" : ""}
           type="button"
-          aria-pressed={category.id === activeCategory}
-          onClick={() => onSelect(category.id)}
+          onClick={() => onSelect(category.slug ?? ALL_CATEGORY)}
         >
-          {category.label}
+          {category.name}
         </button>
       ))}
-      <span aria-live="polite">{isPending ? "정렬 중" : "카테고리 선택"}</span>
     </section>
   );
 }
 
-type DebateGridProps = {
-  debates: PlatformDebateCard[];
-  onStart: () => void;
-};
+function DebateCatalog({
+  debates,
+  onCreate,
+}: {
+  debates: DebateSession[];
+  onCreate: () => void;
+}) {
+  if (debates.length === 0) {
+    return <EmptyCatalog message="조건에 맞는 공개 토론이 없습니다." onCreate={onCreate} />;
+  }
 
-function DebateGrid({ debates, onStart }: DebateGridProps) {
   return (
-    <div className="debate-grid">
+    <div className="debate-grid" id="public-list">
       {debates.map((debate) => (
         <article className="debate-card" key={debate.id}>
           <div className="debate-card-top">
-            <span>{debate.categoryLabel}</span>
+            <span>{debate.category?.name ?? debate.topicCategory ?? "기타"}</span>
             <strong>{debate.status}</strong>
           </div>
-          <div className="debate-card-mark" style={accentStyle(debate.accent)} />
-          <h3>{debate.title}</h3>
-          <p>{debate.description}</p>
+          <div className="debate-card-mark" />
+          <h3>{debate.topicTitle}</h3>
+          <p>{debate.topicDescription}</p>
           <div className="mini-participants">
-            {debate.participants.map((participant) => (
-              <span key={participant}>{participant}</span>
+            {(debate.participants ?? []).map((participant) => (
+              <span key={participant.id ?? participant.position}>
+                {participant.name}
+              </span>
             ))}
           </div>
-          <StatLine stats={debate.stats} />
-          <button className="text-link-button" type="button" onClick={onStart}>
-            이 주제로 시작하기
-          </button>
+          <dl className="stat-line">
+            <div>
+              <dt>라운드</dt>
+              <dd>{debate.currentRound ?? 0}/{debate.maxRounds ?? 0}</dd>
+            </div>
+            <div>
+              <dt>형식</dt>
+              <dd>{debate.format}</dd>
+            </div>
+            <div>
+              <dt>완료</dt>
+              <dd>{formatDate(debate.endedAt)}</dd>
+            </div>
+          </dl>
         </article>
       ))}
     </div>
   );
 }
 
-function SpotlightCharacters({ onCreate }: { onCreate: () => void }) {
-  return (
-    <section className="sidebar-section" id="characters">
-      <header>
-        <p className="eyebrow">CHARACTER META</p>
-        <h2>인기 캐릭터</h2>
-      </header>
-      <div className="spotlight-list">
-        {characterSpotlights.map((character) => (
-          <article key={character.id}>
-            <div>
-              <strong>{character.name}</strong>
-              <span>{character.model}</span>
-            </div>
-            <p>{character.description}</p>
-            <StatLine stats={character.stats} />
-          </article>
-        ))}
-      </div>
-      <button className="secondary-button wide" type="button" onClick={onCreate}>
-        내 캐릭터 만들기
-      </button>
-    </section>
-  );
-}
+function CharacterCatalog({
+  characters,
+  onCreate,
+}: {
+  characters: Character[];
+  onCreate: () => void;
+}) {
+  if (characters.length === 0) {
+    return <EmptyCatalog message="조건에 맞는 공개 캐릭터가 없습니다." onCreate={onCreate} />;
+  }
 
-type RecentSessionsProps = {
-  sessions: PlatformDebateCard[];
-  onStart: () => void;
-};
-
-function RecentSessions({ sessions, onStart }: RecentSessionsProps) {
   return (
-    <section className="sidebar-section">
-      <header>
-        <p className="eyebrow">RECENT ROOMS</p>
-        <h2>최근 열린 토론</h2>
-      </header>
-      <div className="recent-list">
-        {sessions.map((session) => (
-          <button key={session.id} type="button" onClick={onStart}>
-            <span>{session.categoryLabel}</span>
-            <strong>{session.title}</strong>
-          </button>
-        ))}
-      </div>
-    </section>
-  );
-}
-
-function StatLine({ stats }: { stats: PlatformDebateCard["stats"] }) {
-  return (
-    <dl className="stat-line">
-      {stats.map((stat) => (
-        <div key={`${stat.label}-${stat.value}`}>
-          <dt>{stat.label}</dt>
-          <dd>{stat.value}</dd>
-        </div>
+    <div className="character-catalog" id="public-list">
+      {characters.map((character) => (
+        <article className="public-character-card" key={character.id}>
+          <span>{character.category?.name ?? "기타"}</span>
+          <h3>{character.name}</h3>
+          <p>{character.description || "설명 없음"}</p>
+          <small>{character.visibility}</small>
+        </article>
       ))}
-    </dl>
+    </div>
   );
 }
 
-function accentStyle(accent: string): CSSProperties {
-  return { "--accent": accent } as CSSProperties;
+function EmptyCatalog({
+  message,
+  onCreate,
+}: {
+  message: string;
+  onCreate: () => void;
+}) {
+  return (
+    <div className="empty-catalog">
+      <p>{message}</p>
+      <button className="secondary-button" type="button" onClick={onCreate}>
+        직접 만들기
+      </button>
+    </div>
+  );
+}
+
+async function jsonFetcher<T>(url: string): Promise<T> {
+  return readJson<T>(await bffFetch(url));
+}
+
+function publicListUrl(base: string, query: string, category: string | undefined) {
+  const params = new URLSearchParams({ page: "0", size: "20" });
+  if (query) {
+    params.set("query", query);
+  }
+  if (category) {
+    params.set("category", category);
+  }
+  return `${base}?${params.toString()}`;
+}
+
+function formatDate(value: string | undefined) {
+  if (!value) {
+    return "-";
+  }
+  return value.slice(0, 10);
 }

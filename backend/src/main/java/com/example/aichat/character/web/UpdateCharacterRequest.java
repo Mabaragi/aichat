@@ -8,6 +8,8 @@ import java.util.Map;
 public record UpdateCharacterRequest(
         @Schema(description = "Updated character name.", example = "Rational Gourmet")
         @Size(max = 50) String name,
+        @Schema(description = "Updated character category slug.", example = "critic")
+        String category,
         @Schema(description = "Updated character description.",
                 example = "A calm debater who analyzes food choices logically.")
         @Size(max = 1000) String description,

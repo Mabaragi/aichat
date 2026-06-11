@@ -1,5 +1,9 @@
 package com.example.aichat.character.application;
 
+import com.example.aichat.category.application.CategoryResolver;
+import com.example.aichat.category.application.CategorySummaryView;
+import com.example.aichat.category.domain.Category;
+import com.example.aichat.category.domain.CategoryScope;
 import com.example.aichat.character.domain.Character;
 import com.example.aichat.character.domain.CharacterRepository;
 import com.example.aichat.common.exception.BusinessException;
@@ -11,11 +15,14 @@ import org.springframework.stereotype.Service;
 public class UpdateCharacterUseCase {
 
     private final CharacterRepository characterRepository;
+    private final CategoryResolver categoryResolver;
     private final TimeProvider timeProvider;
 
     public UpdateCharacterUseCase(CharacterRepository characterRepository,
+                                  CategoryResolver categoryResolver,
                                   TimeProvider timeProvider) {
         this.characterRepository = characterRepository;
+        this.categoryResolver = categoryResolver;
         this.timeProvider = timeProvider;
     }
 
@@ -33,7 +40,13 @@ public class UpdateCharacterUseCase {
             );
         }
 
+        Category category = command.category() == null
+                ? null
+                : categoryResolver.requireActive(CategoryScope.CHARACTER, command.category());
+        Long nextCategoryId = category == null ? character.getCategoryId() : category.getId();
+
         character.update(
+                nextCategoryId,
                 command.name() != null ? command.name() : character.getName(),
                 command.description() != null ? command.description() : character.getDescription(),
                 command.personality() != null ? command.personality() : character.getPersonality(),
@@ -42,6 +55,13 @@ public class UpdateCharacterUseCase {
                 timeProvider.now()
         );
 
-        return CharacterView.from(characterRepository.save(character));
+        Character saved = characterRepository.save(character);
+        CategorySummaryView summary = category == null
+                ? saved.getCategoryId() == null
+                ? null
+                : categoryResolver.summariesById(java.util.List.of(saved.getCategoryId()))
+                .get(saved.getCategoryId())
+                : CategorySummaryView.from(category);
+        return CharacterView.from(saved, summary);
     }
 }

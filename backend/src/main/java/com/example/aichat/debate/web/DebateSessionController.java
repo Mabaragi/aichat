@@ -68,11 +68,12 @@ public class DebateSessionController {
                                             {
                                               "topic": {
                                                 "title": "Sauce-first vs dip-first",
-                                                "description": "Which serving style creates the better eating experience?",
-                                                "category": "FOOD"
-                                              },
-                                              "format": "PROS_AND_CONS",
-                                              "maxRounds": 5,
+                                              "description": "Which serving style creates the better eating experience?",
+                                              "category": "food"
+                                            },
+                                            "format": "PROS_AND_CONS",
+                                            "visibility": "PUBLIC",
+                                            "maxRounds": 5,
                                               "maxTurnLength": 600,
                                               "participants": [
                                                 {"characterId": 10, "model": "FAST"},
@@ -181,6 +182,7 @@ public class DebateSessionController {
                 request.topic().title(),
                 request.topic().description(),
                 request.topic().category(),
+                request.visibility(),
                 request.format(),
                 request.maxRounds(),
                 request.maxTurnLength(),

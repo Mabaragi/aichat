@@ -11,6 +11,7 @@
 
 - `decisions/2026-06-10-monorepo-backend-boundary.md`: 루트와 `backend/`의 소유권 및 문서 경계.
 - `decisions/2026-06-10-next-bff-deployment-boundary.md`: JWT cookie BFF와 EC2 Docker network 공개 경계.
+- `decisions/2026-06-11-public-category-discovery.md`: DB 카테고리, 공개 탐색 API, 공개 토론 노출 조건 경계.
 
 ## Worklogs
 

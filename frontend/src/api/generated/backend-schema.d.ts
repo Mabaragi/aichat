@@ -207,7 +207,7 @@ export interface paths {
          * List debate turns
          * @description Returns generated turns in turnIndex order.
          */
-        get: operations["list_1"];
+        get: operations["list_4"];
         put?: never;
         post?: never;
         delete?: never;
@@ -230,6 +230,126 @@ export interface paths {
          * @description Generates the next debate turn for the session and stores it.
          */
         post: operations["generate"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/public/categories": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List public categories
+         * @description Returns active categories for a resource scope.
+         */
+        get: operations["list_3"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/public/characters": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List public characters
+         * @description Returns PUBLIC characters filtered by query and category.
+         */
+        get: operations["list_2"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/public/characters/{characterId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get a public character
+         * @description Returns one PUBLIC character by id.
+         */
+        get: operations["get_2"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/public/debate-sessions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List public completed debates
+         * @description Returns PUBLIC and COMPLETED debate sessions filtered by query and category.
+         */
+        get: operations["list_1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/public/debate-sessions/{sessionId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get a public completed debate
+         * @description Returns a PUBLIC and COMPLETED debate session by id.
+         */
+        get: operations["get_1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/public/debate-sessions/{sessionId}/turns": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List turns for a public completed debate
+         * @description Returns generated turns for a PUBLIC and COMPLETED debate in turnIndex order.
+         */
+        get: operations["turns"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -286,8 +406,35 @@ export interface components {
             /** @description Current authenticated user. */
             user?: components["schemas"]["UserResponse"];
         };
+        /** @description Category summary response. */
+        CategorySummaryResponse: {
+            /**
+             * Format: int64
+             * @description Category identifier.
+             * @example 1
+             */
+            id?: number;
+            /**
+             * @description Display category name.
+             * @example 음식
+             */
+            name?: string;
+            /**
+             * @description Category scope.
+             * @example DEBATE
+             * @enum {string}
+             */
+            scope?: "DEBATE" | "CHARACTER";
+            /**
+             * @description Stable category slug.
+             * @example food
+             */
+            slug?: string;
+        };
         /** @description Character response. */
         CharacterResponse: {
+            /** @description Character category summary. */
+            category?: components["schemas"]["CategorySummaryResponse"];
             /**
              * Format: date-time
              * @description Timestamp when the character was created.
@@ -373,6 +520,11 @@ export interface components {
         /** @description Request payload for creating a character. */
         CreateCharacterRequest: {
             /**
+             * @description Character category slug. Defaults to other when omitted.
+             * @example expert
+             */
+            category?: string;
+            /**
              * @description Short character description.
              * @example A calm debater who analyzes food choices logically.
              */
@@ -448,12 +600,18 @@ export interface components {
             participants: components["schemas"]["CreateDebateSessionParticipantRequest"][];
             /** @description Debate topic metadata. */
             topic: components["schemas"]["CreateDebateSessionTopicRequest"];
+            /**
+             * @description Debate visibility. PUBLIC sessions appear in the public catalog after completion.
+             * @example PUBLIC
+             * @enum {string}
+             */
+            visibility?: "PUBLIC" | "PRIVATE";
         };
         /** @description Debate topic details. */
         CreateDebateSessionTopicRequest: {
             /**
-             * @description Optional topic category.
-             * @example FOOD
+             * @description Topic category slug. Defaults to other when omitted.
+             * @example food
              */
             category?: string;
             /**
@@ -524,6 +682,8 @@ export interface components {
         };
         /** @description Debate session response. */
         DebateSessionResponse: {
+            /** @description Debate category summary. */
+            category?: components["schemas"]["CategorySummaryResponse"];
             /**
              * Format: date-time
              * @description Timestamp when the session was created.
@@ -536,6 +696,12 @@ export interface components {
              * @example 0
              */
             currentRound?: number;
+            /**
+             * Format: date-time
+             * @description Timestamp when the session was completed.
+             * @example 2026-06-10T12:10:00
+             */
+            endedAt?: string;
             /**
              * @description Configured debate format.
              * @example PROS_AND_CONS
@@ -569,14 +735,20 @@ export interface components {
             /** @description Two participant snapshots captured at session creation. */
             participants?: components["schemas"]["DebateSessionParticipantResponse"][];
             /**
+             * Format: date-time
+             * @description Timestamp when the session was started.
+             * @example 2026-06-10T12:01:00
+             */
+            startedAt?: string;
+            /**
              * @description Current session status.
              * @example CREATED
              * @enum {string}
              */
             status?: "CREATED" | "READY" | "RUNNING" | "PAUSED" | "COMPLETED" | "FAILED" | "CANCELLED";
             /**
-             * @description Optional topic category.
-             * @example FOOD
+             * @description Optional topic category slug snapshot.
+             * @example food
              */
             topicCategory?: string;
             /**
@@ -589,6 +761,12 @@ export interface components {
              * @example Sauce-first vs dip-first
              */
             topicTitle?: string;
+            /**
+             * @description Debate visibility.
+             * @example PUBLIC
+             * @enum {string}
+             */
+            visibility?: "PUBLIC" | "PRIVATE";
         };
         /** @description Debate turn summary response. */
         DebateTurnResponse: {
@@ -647,7 +825,7 @@ export interface components {
              * @example UNAUTHORIZED
              * @enum {string}
              */
-            code?: "EMAIL_ALREADY_EXISTS" | "INVALID_CREDENTIALS" | "INVALID_TOKEN" | "REFRESH_TOKEN_REUSED" | "UNAUTHORIZED" | "USER_NOT_FOUND" | "CHARACTER_NOT_FOUND" | "DEBATE_SESSION_NOT_FOUND" | "DEBATE_PARTICIPANT_NOT_FOUND" | "INVALID_SESSION_STATE" | "INVALID_DEBATE_RULE" | "INVALID_PARTICIPANT_COUNT" | "DUPLICATED_SPEAKING_ORDER" | "TURN_GENERATION_FAILED" | "SHARED_CONTENT_NOT_FOUND";
+            code?: "EMAIL_ALREADY_EXISTS" | "INVALID_CREDENTIALS" | "INVALID_TOKEN" | "REFRESH_TOKEN_REUSED" | "UNAUTHORIZED" | "USER_NOT_FOUND" | "CATEGORY_NOT_FOUND" | "CHARACTER_NOT_FOUND" | "DEBATE_SESSION_NOT_FOUND" | "DEBATE_PARTICIPANT_NOT_FOUND" | "INVALID_SESSION_STATE" | "INVALID_DEBATE_RULE" | "INVALID_PARTICIPANT_COUNT" | "DUPLICATED_SPEAKING_ORDER" | "TURN_GENERATION_FAILED" | "SHARED_CONTENT_NOT_FOUND";
             /**
              * @description Human-readable error message.
              * @example Authentication is required
@@ -747,6 +925,30 @@ export interface components {
              */
             password: string;
         };
+        PublicCharacterPageResponse: {
+            hasNext?: boolean;
+            items?: components["schemas"]["CharacterResponse"][];
+            /** Format: int32 */
+            page?: number;
+            /** Format: int32 */
+            size?: number;
+            /** Format: int64 */
+            totalElements?: number;
+            /** Format: int32 */
+            totalPages?: number;
+        };
+        PublicDebateSessionPageResponse: {
+            hasNext?: boolean;
+            items?: components["schemas"]["DebateSessionResponse"][];
+            /** Format: int32 */
+            page?: number;
+            /** Format: int32 */
+            size?: number;
+            /** Format: int64 */
+            totalElements?: number;
+            /** Format: int32 */
+            totalPages?: number;
+        };
         /** @description Request payload carrying a refresh token. */
         RefreshTokenRequest: {
             /**
@@ -797,6 +999,11 @@ export interface components {
         };
         /** @description Request payload for partially updating a character. */
         UpdateCharacterRequest: {
+            /**
+             * @description Updated character category slug.
+             * @example critic
+             */
+            category?: string;
             /**
              * @description Updated character description.
              * @example A calm debater who analyzes food choices logically.
@@ -1376,7 +1583,7 @@ export interface operations {
             };
         };
     };
-    list_1: {
+    list_4: {
         parameters: {
             query?: never;
             header?: never;
@@ -1393,7 +1600,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["DebateTurnResponse"];
+                    "application/json": components["schemas"]["DebateTurnResponse"][];
                 };
             };
             /** @description Authentication is required. */
@@ -1481,6 +1688,210 @@ export interface operations {
             };
             /** @description Generation provider failed. */
             502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list_3: {
+        parameters: {
+            query: {
+                /**
+                 * @description Category scope.
+                 * @example DEBATE
+                 */
+                scope: "DEBATE" | "CHARACTER";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Categories returned. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CategorySummaryResponse"][];
+                };
+            };
+            /** @description Invalid scope. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list_2: {
+        parameters: {
+            query?: {
+                query?: string;
+                /**
+                 * @description Character category slug.
+                 * @example expert
+                 */
+                category?: string;
+                page?: number;
+                size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Public characters returned. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicCharacterPageResponse"];
+                };
+            };
+            /** @description Category not found. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                characterId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Public character returned. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CharacterResponse"];
+                };
+            };
+            /** @description Character not found. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list_1: {
+        parameters: {
+            query?: {
+                query?: string;
+                /**
+                 * @description Debate category slug.
+                 * @example food
+                 */
+                category?: string;
+                page?: number;
+                size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Public debate sessions returned. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicDebateSessionPageResponse"];
+                };
+            };
+            /** @description Category not found. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                sessionId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Public debate session returned. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DebateSessionResponse"];
+                };
+            };
+            /** @description Debate session not found. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    turns: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                sessionId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Public debate turns returned. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DebateTurnResponse"][];
+                };
+            };
+            /** @description Debate session not found. */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

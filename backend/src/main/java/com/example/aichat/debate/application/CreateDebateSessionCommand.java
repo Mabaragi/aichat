@@ -11,6 +11,7 @@ public record CreateDebateSessionCommand(
         String topicTitle,
         String topicDescription,
         String topicCategory,
+        String visibility,
         DebateFormat format,
         int maxRounds,
         Integer maxTurnLength,
@@ -22,6 +23,6 @@ public record CreateDebateSessionCommand(
                                       Integer maxTurnLength,
                                       List<CreateDebateParticipantCommand> participants) {
         this(RequestActor.system(), ownerId, topicTitle, topicDescription,
-                topicCategory, format, maxRounds, maxTurnLength, participants);
+                topicCategory, null, format, maxRounds, maxTurnLength, participants);
     }
 }

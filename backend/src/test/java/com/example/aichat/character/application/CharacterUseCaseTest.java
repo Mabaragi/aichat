@@ -1,5 +1,9 @@
 package com.example.aichat.character.application;
 
+import com.example.aichat.category.application.CategoryResolver;
+import com.example.aichat.category.domain.Category;
+import com.example.aichat.category.domain.CategoryRepository;
+import com.example.aichat.category.domain.CategoryScope;
 import com.example.aichat.character.domain.Personality;
 import com.example.aichat.character.domain.SpeechStyle;
 import com.example.aichat.character.infrastructure.InMemoryCharacterRepository;
@@ -11,6 +15,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.time.LocalDateTime;
+import java.util.Collection;
+import java.util.List;
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -29,10 +36,11 @@ class CharacterUseCaseTest {
     void setUp() {
         repository = new InMemoryCharacterRepository();
         timeProvider = () -> LocalDateTime.of(2026, 6, 8, 12, 0);
-        createCharacterUseCase = new CreateCharacterUseCase(repository, timeProvider);
-        getCharacterUseCase = new GetCharacterUseCase(repository);
-        listCharactersUseCase = new ListCharactersUseCase(repository);
-        updateCharacterUseCase = new UpdateCharacterUseCase(repository, timeProvider);
+        CategoryResolver categoryResolver = categoryResolver();
+        createCharacterUseCase = new CreateCharacterUseCase(repository, categoryResolver, timeProvider);
+        getCharacterUseCase = new GetCharacterUseCase(repository, categoryResolver);
+        listCharactersUseCase = new ListCharactersUseCase(repository, categoryResolver);
+        updateCharacterUseCase = new UpdateCharacterUseCase(repository, categoryResolver, timeProvider);
         deleteCharacterUseCase = new DeleteCharacterUseCase(repository);
     }
 
@@ -131,5 +139,37 @@ class CharacterUseCaseTest {
         assertThatThrownBy(call)
                 .isInstanceOfSatisfying(BusinessException.class, exception ->
                         assertThat(exception.getCode()).isEqualTo(ErrorCode.CHARACTER_NOT_FOUND));
+    }
+
+    private static CategoryResolver categoryResolver() {
+        Category other = new Category(
+                100L,
+                CategoryScope.CHARACTER,
+                "other",
+                "기타",
+                null,
+                999,
+                true,
+                LocalDateTime.of(2026, 6, 8, 12, 0),
+                LocalDateTime.of(2026, 6, 8, 12, 0)
+        );
+        return new CategoryResolver(new CategoryRepository() {
+            @Override
+            public List<Category> findActiveByScope(CategoryScope scope) {
+                return scope == CategoryScope.CHARACTER ? List.of(other) : List.of();
+            }
+
+            @Override
+            public Optional<Category> findActiveByScopeAndSlug(CategoryScope scope, String slug) {
+                return scope == CategoryScope.CHARACTER && "other".equals(slug)
+                        ? Optional.of(other)
+                        : Optional.empty();
+            }
+
+            @Override
+            public List<Category> findByIds(Collection<Long> categoryIds) {
+                return categoryIds.contains(other.getId()) ? List.of(other) : List.of();
+            }
+        });
     }
 }

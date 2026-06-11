@@ -85,7 +85,7 @@ class DebateSessionControllerWebMvcTest {
                                   "topic": {
                                     "title": "부먹 vs 찍먹",
                                     "description": "어느 방식이 더 나은가?",
-                                    "category": "FOOD"
+                                    "category": "food"
                                   },
                                   "format": "PROS_AND_CONS",
                                   "maxRounds": 5,
@@ -136,7 +136,7 @@ class DebateSessionControllerWebMvcTest {
                                   "topic": {
                                     "title": "부먹 vs 찍먹",
                                     "description": "어느 방식이 더 나은가?",
-                                    "category": "FOOD"
+                                    "category": "food"
                                   },
                                   "format": "PROS_AND_CONS",
                                   "maxRounds": 5,
@@ -226,7 +226,7 @@ class DebateSessionControllerWebMvcTest {
                 1L,
                 "부먹 vs 찍먹",
                 "어느 방식이 더 나은가?",
-                "FOOD",
+                "food",
                 DebateSessionStatus.CREATED,
                 DebateFormat.PROS_AND_CONS,
                 5,

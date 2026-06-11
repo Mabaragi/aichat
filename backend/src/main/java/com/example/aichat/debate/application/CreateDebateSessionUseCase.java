@@ -1,5 +1,9 @@
 package com.example.aichat.debate.application;
 
+import com.example.aichat.category.application.CategoryResolver;
+import com.example.aichat.category.application.CategorySummaryView;
+import com.example.aichat.category.domain.Category;
+import com.example.aichat.category.domain.CategoryScope;
 import com.example.aichat.character.domain.Character;
 import com.example.aichat.character.domain.CharacterRepository;
 import com.example.aichat.character.domain.Personality;
@@ -23,15 +27,18 @@ public class CreateDebateSessionUseCase {
     private final UserRepository userRepository;
     private final CharacterRepository characterRepository;
     private final DebateSessionRepository debateSessionRepository;
+    private final CategoryResolver categoryResolver;
     private final TimeProvider timeProvider;
 
     public CreateDebateSessionUseCase(UserRepository userRepository,
                                       CharacterRepository characterRepository,
                                       DebateSessionRepository debateSessionRepository,
+                                      CategoryResolver categoryResolver,
                                       TimeProvider timeProvider) {
         this.userRepository = userRepository;
         this.characterRepository = characterRepository;
         this.debateSessionRepository = debateSessionRepository;
+        this.categoryResolver = categoryResolver;
         this.timeProvider = timeProvider;
     }
 
@@ -44,13 +51,16 @@ public class CreateDebateSessionUseCase {
             );
         }
         requireUser(command.ownerId());
+        Category category = categoryResolver.requireActive(CategoryScope.DEBATE, command.topicCategory());
         List<DebateParticipant> participants = createParticipants(command);
 
         DebateSession session = DebateSession.create(
                 command.ownerId(),
+                category.getId(),
                 command.topicTitle(),
                 command.topicDescription(),
-                command.topicCategory(),
+                category.getSlug(),
+                command.visibility(),
                 command.format(),
                 command.maxRounds(),
                 command.maxTurnLength(),
@@ -58,7 +68,10 @@ public class CreateDebateSessionUseCase {
                 timeProvider.now()
         );
 
-        return DebateSessionView.from(debateSessionRepository.save(session));
+        return DebateSessionView.from(
+                debateSessionRepository.save(session),
+                CategorySummaryView.from(category)
+        );
     }
 
     private void requireUser(Long ownerId) {

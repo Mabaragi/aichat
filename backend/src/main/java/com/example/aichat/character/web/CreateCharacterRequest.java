@@ -9,6 +9,9 @@ import java.util.Map;
 public record CreateCharacterRequest(
         @Schema(description = "Character name.", example = "Rational Gourmet")
         @NotBlank @Size(max = 50) String name,
+        @Schema(description = "Character category slug. Defaults to other when omitted.",
+                example = "expert")
+        String category,
         @Schema(description = "Short character description.",
                 example = "A calm debater who analyzes food choices logically.")
         @Size(max = 1000) String description,

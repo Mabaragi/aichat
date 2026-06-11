@@ -3,15 +3,16 @@ package com.example.aichat.character.domain;
 import lombok.Getter;
 
 import java.time.LocalDateTime;
-import java.util.Locale;
+import com.example.aichat.common.domain.Visibility;
 
 @Getter
 public class Character {
 
-    public static final String DEFAULT_VISIBILITY = "PRIVATE";
+    public static final String DEFAULT_VISIBILITY = Visibility.DEFAULT;
 
     private final Long id;
     private final Long ownerId;
+    private Long categoryId;
     private String name;
     private String description;
     private Personality personality;
@@ -23,6 +24,13 @@ public class Character {
     public Character(Long id, Long ownerId, String name, String description,
                      Personality personality, SpeechStyle speechStyle, String visibility,
                      LocalDateTime createdAt, LocalDateTime updatedAt) {
+        this(id, ownerId, null, name, description, personality, speechStyle,
+                visibility, createdAt, updatedAt);
+    }
+
+    public Character(Long id, Long ownerId, Long categoryId, String name, String description,
+                     Personality personality, SpeechStyle speechStyle, String visibility,
+                     LocalDateTime createdAt, LocalDateTime updatedAt) {
         validateOwnerId(ownerId);
         validateName(name);
         validateDescription(description);
@@ -31,6 +39,7 @@ public class Character {
 
         this.id = id;
         this.ownerId = ownerId;
+        this.categoryId = categoryId;
         this.name = name;
         this.description = description;
         this.personality = personality;
@@ -44,7 +53,15 @@ public class Character {
                                    String description, Personality personality,
                                    SpeechStyle speechStyle, LocalDateTime createdAt,
                                    LocalDateTime updatedAt) {
-        return create(ownerId, name, description, personality, speechStyle,
+        return create(ownerId, null, name, description, personality, speechStyle,
+                createdAt, updatedAt);
+    }
+
+    public static Character create(Long ownerId, Long categoryId, String name,
+                                   String description, Personality personality,
+                                   SpeechStyle speechStyle, LocalDateTime createdAt,
+                                   LocalDateTime updatedAt) {
+        return create(ownerId, categoryId, name, description, personality, speechStyle,
                 DEFAULT_VISIBILITY, createdAt, updatedAt);
     }
 
@@ -53,23 +70,39 @@ public class Character {
                                    SpeechStyle speechStyle, String visibility,
                                    LocalDateTime createdAt,
                                    LocalDateTime updatedAt) {
-        return new Character(null, ownerId, name, description, personality,
+        return create(ownerId, null, name, description, personality, speechStyle,
+                visibility, createdAt, updatedAt);
+    }
+
+    public static Character create(Long ownerId, Long categoryId, String name,
+                                   String description, Personality personality,
+                                   SpeechStyle speechStyle, String visibility,
+                                   LocalDateTime createdAt,
+                                   LocalDateTime updatedAt) {
+        return new Character(null, ownerId, categoryId, name, description, personality,
                 speechStyle, visibility, createdAt, updatedAt);
     }
 
-    public void update(String name, String description, Personality personality,
+    public void update(Long categoryId, String name, String description, Personality personality,
                        SpeechStyle speechStyle, String visibility,
                        LocalDateTime updatedAt) {
         validateName(name);
         validateDescription(description);
         validateTimestamp("updatedAt", updatedAt);
 
+        this.categoryId = categoryId;
         this.name = name;
         this.description = description;
         this.personality = personality;
         this.speechStyle = speechStyle;
         this.visibility = normalizeVisibility(visibility);
         this.updatedAt = updatedAt;
+    }
+
+    public void update(String name, String description, Personality personality,
+                       SpeechStyle speechStyle, String visibility,
+                       LocalDateTime updatedAt) {
+        update(categoryId, name, description, personality, speechStyle, visibility, updatedAt);
     }
 
     private static void validateOwnerId(Long ownerId) {
@@ -102,10 +135,6 @@ public class Character {
     }
 
     private static String normalizeVisibility(String visibility) {
-        if (visibility == null || visibility.isBlank()) {
-            return DEFAULT_VISIBILITY;
-        }
-
-        return visibility.trim().toUpperCase(Locale.ROOT);
+        return Visibility.normalize(visibility);
     }
 }
