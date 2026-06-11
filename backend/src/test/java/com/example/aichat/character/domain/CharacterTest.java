@@ -1,5 +1,6 @@
 package com.example.aichat.character.domain;
 
+import com.example.aichat.support.PersonaFixtures;
 import org.junit.jupiter.api.Test;
 
 import java.time.LocalDateTime;
@@ -14,16 +15,14 @@ class CharacterTest {
         var ownerId = 1L;
         var name = "홍길동";
         var description = "의적";
-        var personality = defaultPersonality();
-        var speechStyle = defaultSpeechStyle();
+        var persona = PersonaFixtures.rationalGourmet();
 
         Character character = characterFixture().create();
 
         assertThat(character.getOwnerId()).isEqualTo(ownerId);
         assertThat(character.getName()).isEqualTo(name);
         assertThat(character.getDescription()).isEqualTo(description);
-        assertThat(character.getPersonality()).isEqualTo(personality);
-        assertThat(character.getSpeechStyle()).isEqualTo(speechStyle);
+        assertThat(character.getPersona()).isEqualTo(persona);
         assertThat(character.getCreatedAt()).isEqualTo(defaultNow());
         assertThat(character.getUpdatedAt()).isEqualTo(defaultNow());
         assertThat(character.getVisibility()).isEqualTo("PRIVATE");
@@ -35,8 +34,7 @@ class CharacterTest {
                 1L,
                 "홍길동",
                 "의적",
-                Personality.of("{\"rationality\":90}"),
-                SpeechStyle.of("{\"tone\":\"차분함\"}"),
+                PersonaFixtures.rationalGourmet(),
                 "public",
                 defaultNow(),
                 defaultNow()
@@ -83,14 +81,12 @@ class CharacterTest {
     }
 
     @Test
-    void allowCharacterWithNullPersonalityAndSpeechStyle() {
-        Character character = characterFixture()
-                .personality(null)
-                .speechStyle(null)
-                .create();
+    void rejectCharacterWithNullPersona() {
+        var fixture = characterFixture().persona(null);
 
-        assertThat(character.getPersonality()).isNull();
-        assertThat(character.getSpeechStyle()).isNull();
+        assertThatThrownBy(fixture::create)
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("persona is required");
     }
 
     @Test
@@ -101,27 +97,21 @@ class CharacterTest {
         character.update(
                 "새 이름",
                 null,
-                Personality.of("{\"empathy\":80}"),
-                SpeechStyle.of("{\"tone\":\"반말\"}"),
+                PersonaFixtures.empathetic(),
                 "public",
                 updatedAt
         );
 
         assertThat(character.getName()).isEqualTo("새 이름");
         assertThat(character.getDescription()).isNull();
-        assertThat(character.getPersonality()).isEqualTo(Personality.of("{\"empathy\":80}"));
-        assertThat(character.getSpeechStyle()).isEqualTo(SpeechStyle.of("{\"tone\":\"반말\"}"));
+        assertThat(character.getPersona()).isEqualTo(PersonaFixtures.empathetic());
         assertThat(character.getVisibility()).isEqualTo("PUBLIC");
         assertThat(character.getCreatedAt()).isEqualTo(defaultNow());
         assertThat(character.getUpdatedAt()).isEqualTo(updatedAt);
     }
 
-    private static Personality defaultPersonality() {
-        return Personality.of("{\"rationality\":90}");
-    }
-
-    private static SpeechStyle defaultSpeechStyle() {
-        return SpeechStyle.of("{\"tone\":\"차분함\"}");
+    private static Persona defaultPersona() {
+        return PersonaFixtures.rationalGourmet();
     }
 
     private static CharacterFixture characterFixture() {
@@ -136,8 +126,7 @@ class CharacterTest {
         private Long ownerId = 1L;
         private String name = "홍길동";
         private String description = "의적";
-        private Personality personality = defaultPersonality();
-        private SpeechStyle speechStyle = defaultSpeechStyle();
+        private Persona persona = defaultPersona();
         private LocalDateTime createdAt = defaultNow();
         private LocalDateTime updatedAt = defaultNow();
 
@@ -157,17 +146,12 @@ class CharacterTest {
         }
 
         Character create() {
-            return Character.create(ownerId, name, description, personality,
-                    speechStyle, createdAt, updatedAt);
+            return Character.create(ownerId, name, description, persona,
+                    createdAt, updatedAt);
         }
 
-        CharacterFixture personality(Personality personality) {
-            this.personality = personality;
-            return this;
-        }
-
-        CharacterFixture speechStyle(SpeechStyle speechStyle) {
-            this.speechStyle = speechStyle;
+        CharacterFixture persona(Persona persona) {
+            this.persona = persona;
             return this;
         }
     }

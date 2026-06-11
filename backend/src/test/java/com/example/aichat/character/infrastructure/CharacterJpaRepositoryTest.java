@@ -1,6 +1,7 @@
 package com.example.aichat.character.infrastructure;
 
 import com.example.aichat.character.domain.CharacterRepository;
+import com.example.aichat.support.PersonaFixtures;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -60,6 +61,7 @@ class CharacterJpaRepositoryTest extends CharacterRepositoryContractTest {
                 "description",
                 "personality",
                 "speech_style",
+                "persona",
                 "visibility",
                 "created_at",
                 "updated_at"
@@ -80,8 +82,7 @@ class CharacterJpaRepositoryTest extends CharacterRepositoryContractTest {
                     assertThat(CharacterJpaEntityFields.ownerId(entity)).isEqualTo(1L);
                     assertThat(CharacterJpaEntityFields.name(entity)).isEqualTo("합리주의 미식가");
                     assertThat(CharacterJpaEntityFields.description(entity)).isEqualTo("논리적이고 차분하게 음식 취향을 분석하는 캐릭터");
-                    assertThat(CharacterJpaEntityFields.personality(entity)).isEqualTo("{\"rationality\":90}");
-                    assertThat(CharacterJpaEntityFields.speechStyle(entity)).isEqualTo("{\"tone\":\"차분함\"}");
+                    assertThat(CharacterJpaEntityFields.persona(entity)).isEqualTo(PersonaFixtures.rationalGourmetJson());
                     assertThat(CharacterJpaEntityFields.visibility(entity)).isEqualTo("PRIVATE");
                     assertThat(CharacterJpaEntityFields.createdAt(entity)).isEqualTo(DEFAULT_TIME);
                     assertThat(CharacterJpaEntityFields.updatedAt(entity)).isEqualTo(DEFAULT_TIME);
@@ -97,8 +98,7 @@ class CharacterJpaRepositoryTest extends CharacterRepositoryContractTest {
                         2L,
                         "다른 주인",
                         "다른 설명",
-                        "{\"rationality\":10}",
-                        "{\"tone\":\"차분함\"}",
+                        PersonaFixtures.rationalGourmetJson(),
                         "PRIVATE",
                         DEFAULT_TIME,
                         DEFAULT_TIME
@@ -110,8 +110,7 @@ class CharacterJpaRepositoryTest extends CharacterRepositoryContractTest {
                         1L,
                         "두 번째",
                         null,
-                        "{\"humor\":60}",
-                        "{\"tone\":\"반말\"}",
+                        PersonaFixtures.empatheticJson(),
                         "PUBLIC",
                         DEFAULT_TIME,
                         DEFAULT_TIME
@@ -141,11 +140,10 @@ class CharacterJpaRepositoryTest extends CharacterRepositoryContractTest {
         characterJpaRepository.saveAndFlush(sampleEntity(
                 null,
                 1L,
-                expertCategoryId,
-                "공개 미식가",
-                "탕수육 취향을 분석한다",
-                "{\"rationality\":90}",
-                "{\"tone\":\"calm\"}",
+                        expertCategoryId,
+                        "공개 미식가",
+                        "탕수육 취향을 분석한다",
+                PersonaFixtures.rationalGourmetJson(),
                 "PUBLIC",
                 DEFAULT_TIME,
                 DEFAULT_TIME
@@ -153,11 +151,10 @@ class CharacterJpaRepositoryTest extends CharacterRepositoryContractTest {
         characterJpaRepository.saveAndFlush(sampleEntity(
                 null,
                 1L,
-                utilityCategoryId,
-                "공개 도우미",
-                "일정을 정리한다",
-                null,
-                null,
+                        utilityCategoryId,
+                        "공개 도우미",
+                        "일정을 정리한다",
+                PersonaFixtures.empatheticJson(),
                 "PUBLIC",
                 DEFAULT_TIME,
                 DEFAULT_TIME
@@ -165,11 +162,10 @@ class CharacterJpaRepositoryTest extends CharacterRepositoryContractTest {
         characterJpaRepository.saveAndFlush(sampleEntity(
                 null,
                 2L,
-                expertCategoryId,
-                "비공개 미식가",
-                "검색되어서는 안 된다",
-                null,
-                null,
+                        expertCategoryId,
+                        "비공개 미식가",
+                        "검색되어서는 안 된다",
+                PersonaFixtures.rationalGourmetJson(),
                 "PRIVATE",
                 DEFAULT_TIME,
                 DEFAULT_TIME
@@ -193,8 +189,7 @@ class CharacterJpaRepositoryTest extends CharacterRepositoryContractTest {
                 1L,
                 "새 이름",
                 null,
-                "{\"empathy\":80}",
-                "{\"tone\":\"반말\"}",
+                PersonaFixtures.empatheticJson(),
                 "PUBLIC",
                 DEFAULT_TIME,
                 DEFAULT_TIME.plusHours(1)
@@ -211,8 +206,7 @@ class CharacterJpaRepositoryTest extends CharacterRepositoryContractTest {
                     assertThat(CharacterJpaEntityFields.ownerId(entity)).isEqualTo(1L);
                     assertThat(CharacterJpaEntityFields.name(entity)).isEqualTo("새 이름");
                     assertThat(CharacterJpaEntityFields.description(entity)).isNull();
-                    assertThat(CharacterJpaEntityFields.personality(entity)).isEqualTo("{\"empathy\":80}");
-                    assertThat(CharacterJpaEntityFields.speechStyle(entity)).isEqualTo("{\"tone\":\"반말\"}");
+                    assertThat(CharacterJpaEntityFields.persona(entity)).isEqualTo(PersonaFixtures.empatheticJson());
                     assertThat(CharacterJpaEntityFields.visibility(entity)).isEqualTo("PUBLIC");
                     assertThat(CharacterJpaEntityFields.createdAt(entity)).isEqualTo(DEFAULT_TIME);
                     assertThat(CharacterJpaEntityFields.updatedAt(entity)).isEqualTo(DEFAULT_TIME.plusHours(1));
@@ -258,8 +252,7 @@ class CharacterJpaRepositoryTest extends CharacterRepositoryContractTest {
                 null,
                 "합리주의 미식가",
                 "논리적이고 차분하게 음식 취향을 분석하는 캐릭터",
-                "{\"rationality\":90}",
-                "{\"tone\":\"차분함\"}",
+                PersonaFixtures.rationalGourmetJson(),
                 "PRIVATE",
                 DEFAULT_TIME,
                 DEFAULT_TIME
@@ -270,8 +263,7 @@ class CharacterJpaRepositoryTest extends CharacterRepositoryContractTest {
                                                    Long ownerId,
                                                    String name,
                                                    String description,
-                                                   String personality,
-                                                   String speechStyle,
+                                                   String persona,
                                                    String visibility,
                                                    LocalDateTime createdAt,
                                                    LocalDateTime updatedAt) {
@@ -281,8 +273,7 @@ class CharacterJpaRepositoryTest extends CharacterRepositoryContractTest {
                 null,
                 name,
                 description,
-                personality,
-                speechStyle,
+                persona,
                 visibility,
                 createdAt,
                 updatedAt
@@ -294,8 +285,7 @@ class CharacterJpaRepositoryTest extends CharacterRepositoryContractTest {
                                                    Long categoryId,
                                                    String name,
                                                    String description,
-                                                   String personality,
-                                                   String speechStyle,
+                                                   String persona,
                                                    String visibility,
                                                    LocalDateTime createdAt,
                                                    LocalDateTime updatedAt) {
@@ -305,8 +295,7 @@ class CharacterJpaRepositoryTest extends CharacterRepositoryContractTest {
         CharacterJpaEntityFields.set(entity, "categoryId", categoryId);
         CharacterJpaEntityFields.set(entity, "name", name);
         CharacterJpaEntityFields.set(entity, "description", description);
-        CharacterJpaEntityFields.set(entity, "personality", personality);
-        CharacterJpaEntityFields.set(entity, "speechStyle", speechStyle);
+        CharacterJpaEntityFields.set(entity, "persona", persona);
         CharacterJpaEntityFields.set(entity, "visibility", visibility);
         CharacterJpaEntityFields.set(entity, "createdAt", createdAt);
         CharacterJpaEntityFields.set(entity, "updatedAt", updatedAt);
@@ -334,12 +323,8 @@ class CharacterJpaRepositoryTest extends CharacterRepositoryContractTest {
             return field(entity, "description", String.class);
         }
 
-        private static String personality(CharacterJpaEntity entity) {
-            return field(entity, "personality", String.class);
-        }
-
-        private static String speechStyle(CharacterJpaEntity entity) {
-            return field(entity, "speechStyle", String.class);
+        private static String persona(CharacterJpaEntity entity) {
+            return field(entity, "persona", String.class);
         }
 
         private static String visibility(CharacterJpaEntity entity) {

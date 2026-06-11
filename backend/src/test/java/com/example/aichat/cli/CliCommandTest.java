@@ -28,6 +28,7 @@ import com.example.aichat.debate.application.GenerateNextTurnUseCase;
 import com.example.aichat.debate.domain.DebateFormat;
 import com.example.aichat.debate.domain.DebateSessionStatus;
 import com.example.aichat.debate.domain.ParticipantModel;
+import com.example.aichat.support.PersonaFixtures;
 import com.example.aichat.user.application.CreateUserUseCase;
 import com.example.aichat.user.application.GetUserUseCase;
 import com.example.aichat.user.application.UserView;
@@ -383,8 +384,7 @@ class CliCommandTest {
                 1L,
                 "합리주의 미식가",
                 "논리적",
-                "{\"rationality\":90}",
-                "{\"tone\":\"차분함\"}",
+                PersonaFixtures.rationalGourmetJson(),
                 "PRIVATE",
                 LocalDateTime.of(2026, 6, 8, 12, 0),
                 LocalDateTime.of(2026, 6, 8, 12, 0)
@@ -431,8 +431,7 @@ class CliCommandTest {
                 model,
                 name,
                 "논리적인 캐릭터",
-                "{\"rationality\":90}",
-                "{\"tone\":\"차분함\"}"
+                PersonaFixtures.rationalGourmetJson()
         );
     }
 

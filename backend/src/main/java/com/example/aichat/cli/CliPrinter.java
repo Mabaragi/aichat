@@ -59,8 +59,7 @@ public class CliPrinter {
                     "  ownerId=" + character.ownerId(),
                     "  name=" + character.name(),
                     "  description=" + valueOrNull(character.description()),
-                    "  personality=" + valueOrNull(character.personality()),
-                    "  speechStyle=" + valueOrNull(character.speechStyle()),
+                    "  persona=" + valueOrNull(character.persona()),
                     "  visibility=" + character.visibility(),
                     "  createdAt=" + character.createdAt(),
                     "  updatedAt=" + character.updatedAt());
@@ -100,8 +99,7 @@ public class CliPrinter {
                         .append(", model=").append(participant.model())
                         .append(", name=").append(participant.name())
                         .append(", description=").append(valueOrNull(participant.description()))
-                        .append(", personality=").append(valueOrNull(participant.personality()))
-                        .append(", speechStyle=").append(valueOrNull(participant.speechStyle()));
+                        .append(", persona=").append(valueOrNull(participant.persona()));
             }
             return builder.toString();
         }

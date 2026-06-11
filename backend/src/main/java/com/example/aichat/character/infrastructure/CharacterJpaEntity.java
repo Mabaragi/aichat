@@ -15,8 +15,7 @@ public class CharacterJpaEntity {
                        Long categoryId,
                        String name,
                        String description,
-                       String personality,
-                       String speechStyle,
+                       String persona,
                        String visibility,
                        LocalDateTime createdAt,
                        LocalDateTime updatedAt) {
@@ -25,8 +24,7 @@ public class CharacterJpaEntity {
         this.categoryId = categoryId;
         this.name = name;
         this.description = description;
-        this.personality = personality;
-        this.speechStyle = speechStyle;
+        this.persona = persona;
         this.visibility = visibility;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
@@ -52,12 +50,8 @@ public class CharacterJpaEntity {
         return description;
     }
 
-    String personality() {
-        return personality;
-    }
-
-    String speechStyle() {
-        return speechStyle;
+    String persona() {
+        return persona;
     }
 
     String visibility() {
@@ -93,6 +87,9 @@ public class CharacterJpaEntity {
 
     @Column(name = "speech_style", columnDefinition = "TEXT")
     private String speechStyle;
+
+    @Column(columnDefinition = "TEXT")
+    private String persona;
 
     @Column(nullable = false)
     private String visibility;

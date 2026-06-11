@@ -4,7 +4,7 @@ Date: 2026-06-09
 
 ## Context
 
-이 프로젝트는 `CreateCharacterRequest`, `CreateCharacterCommand`, `CharacterView` 같은 경계 데이터와 `Personality`, `SpeechStyle` 같은 작은 value object에 Java `record`를 사용한다.
+이 프로젝트는 `CreateCharacterRequest`, `CreateCharacterCommand`, `CharacterView` 같은 경계 데이터와 `Persona` 같은 작은 value object에 Java `record`를 사용한다.
 
 반대로 `Character`처럼 identity, lifecycle, 상태 변경 메서드가 있는 도메인 entity는 `class`로 둔다.
 
@@ -21,7 +21,7 @@ Java `record`는 값 전달 객체에 필요한 기본 코드를 자동 생성�
 따라서 아래 두 객체는 같은 값으로 비교된다.
 
 ```java
-new Personality("calm").equals(new Personality("calm")) // true
+new Persona(validJson).equals(new Persona(validJson)) // true
 ```
 
 ## Self Validation
@@ -29,14 +29,14 @@ new Personality("calm").equals(new Personality("calm")) // true
 `record`도 compact constructor를 사용해 자기 검증과 정규화를 할 수 있다.
 
 ```java
-public record Personality(String value) {
+public record Persona(String value) {
 
-    public Personality {
+    public Persona {
         if (value == null || value.isBlank()) {
-            throw new IllegalArgumentException("personality is required");
+            throw new IllegalArgumentException("persona is required");
         }
 
-        value = value.trim();
+        value = normalizeAndValidate(value);
     }
 }
 ```
@@ -44,16 +44,16 @@ public record Personality(String value) {
 compact constructor에서 component parameter를 바꾸면 최종 필드에 그 값이 들어간다. 그래서 아래 비교도 true가 된다.
 
 ```java
-new Personality(" calm ").equals(new Personality("calm")) // true
+new Persona(prettyJson).equals(new Persona(canonicalJson)) // true
 ```
 
 ## Why Keep `of`
 
-현재 `Personality.of("calm")`은 `new Personality("calm")`과 거의 같다.
+현재 `Persona.of(json)`은 호출부의 도메인 의도를 드러내고 JSON 정규화/검증 정책을 한 곳에 모은다.
 
 ```java
-public static Personality of(String value) {
-    return new Personality(value);
+public static Persona of(String value) {
+    return new Persona(value);
 }
 ```
 
@@ -62,12 +62,12 @@ public static Personality of(String value) {
 예를 들어 이후에 `null` 처리, JSON 정규화, 기본값, 캐싱 같은 정책이 생기면 `of` 안으로 모을 수 있다.
 
 ```java
-public static Personality of(String value) {
-    return value == null ? null : new Personality(value);
+public static Persona of(String value) {
+    return value == null ? null : new Persona(value);
 }
 ```
 
-단, Java `record`의 canonical constructor는 public이므로 `new Personality(...)` 사용 자체를 막을 수는 없다. 팀이 단순함을 더 중시하면 `of` 없이 constructor 호출로 통일해도 된다.
+단, Java `record`의 canonical constructor는 public이므로 `new Persona(...)` 사용 자체를 막을 수는 없다. 팀이 단순함을 더 중시하면 `of` 없이 constructor 호출로 통일해도 된다.
 
 ## Project Guideline
 

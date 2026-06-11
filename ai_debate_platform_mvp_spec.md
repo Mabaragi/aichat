@@ -254,8 +254,7 @@ MVP에서는 실제 기능 구현을 미뤄도 되지만, 향후 확장을 위�
 | name | String | 캐릭터 이름 |
 | description | String | 캐릭터 설명 |
 | categoryId | Long | 캐릭터 카테고리 ID |
-| personality | String 또는 JSON | 성격 설정 |
-| speechStyle | String 또는 JSON | 말투 설정 |
+| persona | JSON object | 토론 중 모델이 따를 구조화 의사결정 규칙 |
 | visibility | String | 공개 여부 |
 | createdAt | LocalDateTime | 생성일 |
 | updatedAt | LocalDateTime | 수정일 |
@@ -263,25 +262,31 @@ MVP에서는 실제 기능 구현을 미뤄도 되지만, 향후 확장을 위�
 캐릭터 생성/수정 요청은 `category` slug를 받는다. 저장소에는 `categoryId`를 보관하고,
 기존 데이터나 누락된 요청은 `CHARACTER/other` 카테고리로 이관한다.
 
-### personality 예시
+### persona 예시
 
 ```json
 {
-  "rationality": 80,
-  "aggressiveness": 30,
-  "humor": 40,
-  "empathy": 60
-}
-```
-
-### speechStyle 예시
-
-```json
-{
-  "tone": "차분함",
-  "formality": "높음",
-  "sentenceStyle": "논리적이고 간결함",
-  "catchphrase": ""
+  "identity": "정책 분석가",
+  "debateRole": "현실성 검증자",
+  "coreValues": ["실증성", "재정 지속가능성"],
+  "expertise": ["공공정책", "경제정책"],
+  "defaultStance": "선의보다 실행 가능성과 부작용을 먼저 본다.",
+  "evidenceStyle": "통계, 비교 사례, 비용-편익 분석을 선호한다.",
+  "debateBehavior": [
+    "상대 주장의 숨은 전제를 찾는다.",
+    "강한 근거가 나오면 입장을 일부 수정한다."
+  ],
+  "voiceStyle": {
+    "tone": "차분하지만 날카로움",
+    "sentenceLength": "중간",
+    "rhetoricalStyle": "질문과 구조적 반박 중심",
+    "signaturePhrases": ["핵심은 의도가 아니라 실행 조건입니다."]
+  },
+  "boundaries": {
+    "mustDo": ["상대 주장을 먼저 요약한다.", "불확실한 사실은 단정하지 않는다."],
+    "mustNotDo": ["인신공격하지 않는다.", "출처 없는 수치를 만들지 않는다."]
+  },
+  "exampleLines": ["그 주장의 선의는 이해하지만, 실행 조건을 봐야 합니다."]
 }
 ```
 
@@ -342,8 +347,7 @@ public enum DebateFormat {
 | model | ParticipantModel | 참가자가 발화 생성에 사용할 모델 선택 |
 | name | String | 생성 시점 캐릭터 이름 |
 | description | String | 생성 시점 캐릭터 설명 |
-| personality | String 또는 JSON | 생성 시점 성격 설정 |
-| speechStyle | String 또는 JSON | 생성 시점 말투 설정 |
+| persona | JSON object | 생성 시점 캐릭터 persona 스냅샷 |
 
 ### ParticipantModel
 
@@ -477,6 +481,7 @@ CREATE TABLE characters (
     category_id INTEGER,
     personality TEXT,
     speech_style TEXT,
+    persona TEXT NOT NULL,
     visibility TEXT NOT NULL,
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL,
@@ -514,6 +519,7 @@ CREATE TABLE debate_participants (
     description TEXT,
     personality TEXT,
     speech_style TEXT,
+    persona TEXT NOT NULL,
     FOREIGN KEY (session_id) REFERENCES debate_sessions(id),
     UNIQUE (session_id, position)
 );
@@ -895,16 +901,25 @@ Request:
   "name": "합리주의 미식가",
   "category": "expert",
   "description": "논리적이고 차분하게 음식 취향을 분석하는 캐릭터",
-  "personality": {
-    "rationality": 90,
-    "aggressiveness": 20,
-    "humor": 30,
-    "empathy": 50
-  },
-  "speechStyle": {
-    "tone": "차분함",
-    "formality": "높음",
-    "sentenceStyle": "논리적이고 간결함"
+  "persona": {
+    "identity": "합리주의 미식가",
+    "debateRole": "현실성 검증자",
+    "coreValues": ["실증성", "논리"],
+    "expertise": ["음식 문화"],
+    "defaultStance": "취향보다 실행 조건과 경험 품질을 먼저 본다.",
+    "evidenceStyle": "비교 사례와 비용-편익 분석을 선호한다.",
+    "debateBehavior": ["상대 주장의 숨은 전제를 찾는다."],
+    "voiceStyle": {
+      "tone": "차분함",
+      "sentenceLength": "중간",
+      "rhetoricalStyle": "질문과 구조적 반박 중심",
+      "signaturePhrases": ["핵심은 실행 조건입니다."]
+    },
+    "boundaries": {
+      "mustDo": ["상대 주장을 먼저 요약한다.", "불확실한 사실은 단정하지 않는다."],
+      "mustNotDo": ["인신공격하지 않는다.", "출처 없는 수치를 만들지 않는다."]
+    },
+    "exampleLines": ["그 주장의 선의는 이해하지만, 실행 조건을 봐야 합니다."]
   },
   "visibility": "PRIVATE"
 }
@@ -924,16 +939,25 @@ Response:
     "slug": "expert",
     "name": "전문가"
   },
-  "personality": {
-    "rationality": 90,
-    "aggressiveness": 20,
-    "humor": 30,
-    "empathy": 50
-  },
-  "speechStyle": {
-    "tone": "차분함",
-    "formality": "높음",
-    "sentenceStyle": "논리적이고 간결함"
+  "persona": {
+    "identity": "합리주의 미식가",
+    "debateRole": "현실성 검증자",
+    "coreValues": ["실증성", "논리"],
+    "expertise": ["음식 문화"],
+    "defaultStance": "취향보다 실행 조건과 경험 품질을 먼저 본다.",
+    "evidenceStyle": "비교 사례와 비용-편익 분석을 선호한다.",
+    "debateBehavior": ["상대 주장의 숨은 전제를 찾는다."],
+    "voiceStyle": {
+      "tone": "차분함",
+      "sentenceLength": "중간",
+      "rhetoricalStyle": "질문과 구조적 반박 중심",
+      "signaturePhrases": ["핵심은 실행 조건입니다."]
+    },
+    "boundaries": {
+      "mustDo": ["상대 주장을 먼저 요약한다.", "불확실한 사실은 단정하지 않는다."],
+      "mustNotDo": ["인신공격하지 않는다.", "출처 없는 수치를 만들지 않는다."]
+    },
+    "exampleLines": ["그 주장의 선의는 이해하지만, 실행 조건을 봐야 합니다."]
   },
   "visibility": "PRIVATE",
   "createdAt": "2026-06-05T12:00:00"
@@ -1037,11 +1061,25 @@ Response:
       "position": 0,
       "name": "합리주의 미식가",
       "description": "논리적이고 차분하게 음식 취향을 분석하는 캐릭터",
-      "personality": {
-        "rationality": 90
-      },
-      "speechStyle": {
-        "tone": "차분함"
+      "persona": {
+        "identity": "합리주의 미식가",
+        "debateRole": "현실성 검증자",
+        "coreValues": ["실증성", "논리"],
+        "expertise": ["음식 문화"],
+        "defaultStance": "취향보다 실행 조건과 경험 품질을 먼저 본다.",
+        "evidenceStyle": "비교 사례와 비용-편익 분석을 선호한다.",
+        "debateBehavior": ["상대 주장의 숨은 전제를 찾는다."],
+        "voiceStyle": {
+          "tone": "차분함",
+          "sentenceLength": "중간",
+          "rhetoricalStyle": "질문과 구조적 반박 중심",
+          "signaturePhrases": []
+        },
+        "boundaries": {
+          "mustDo": ["상대 주장을 먼저 요약한다."],
+          "mustNotDo": ["인신공격하지 않는다."]
+        },
+        "exampleLines": []
       },
       "model": "FAST"
     },
@@ -1051,8 +1089,26 @@ Response:
       "position": 1,
       "name": "직관적인 미식가",
       "description": null,
-      "personality": null,
-      "speechStyle": null,
+      "persona": {
+        "identity": "직관적인 미식가",
+        "debateRole": "시민 대표",
+        "coreValues": ["생활감"],
+        "expertise": [],
+        "defaultStance": "현장에서 실제로 받아들여질 수 있는지를 먼저 본다.",
+        "evidenceStyle": "구체적 상황 예시를 근거로 든다.",
+        "debateBehavior": [],
+        "voiceStyle": {
+          "tone": "직설적",
+          "sentenceLength": "중간",
+          "rhetoricalStyle": "짧은 반문 중심",
+          "signaturePhrases": []
+        },
+        "boundaries": {
+          "mustDo": ["상대 주장을 먼저 요약한다."],
+          "mustNotDo": ["인신공격하지 않는다."]
+        },
+        "exampleLines": []
+      },
       "model": "QUALITY"
     }
   ],
@@ -1342,17 +1398,44 @@ turnIndex가 10까지 생성되면 세션 완료
 [캐릭터]
 이름: {participantName}
 설명: {participantDescription}
-성격: {participantPersonality}
-말투: {participantSpeechStyle}
+
+[페르소나 규칙]
+정체성: {persona.identity}
+토론 역할: {persona.debateRole}
+핵심 가치: {persona.coreValues}
+전문 영역: {persona.expertise}
+기본 관점: {persona.defaultStance}
+근거 스타일: {persona.evidenceStyle}
+토론 행동: {persona.debateBehavior}
+말투 톤: {persona.voiceStyle.tone}
+문장 길이: {persona.voiceStyle.sentenceLength}
+수사 방식: {persona.voiceStyle.rhetoricalStyle}
+자주 쓰는 표현: {persona.voiceStyle.signaturePhrases}
+반드시 할 것: {persona.boundaries.mustDo}
+하지 말 것: {persona.boundaries.mustNotDo}
+예시 발화: {persona.exampleLines}
 
 [이전 발화]
 {previousTurns}
 
 [지시]
-위 정보를 바탕으로 참가자 모델의 응답 정책에 맞게 다음 발화를 작성하세요.
+위 정보를 바탕으로 참가자 모델의 응답 정책과 페르소나 규칙에 맞게 다음 발화를 작성하세요.
+상대 주장을 먼저 요약하세요.
+핵심 전제, 근거, 논리 비약을 점검하세요.
+근거 또는 예시를 제시하세요.
+불확실한 사실은 단정하지 마세요.
+강한 근거가 나오면 입장을 일부 수정할 수 있습니다.
+페르소나보다 사실성, 안전, 토론 규칙을 우선하세요.
 상대의 이전 발화를 참고하되, 단순 반복하지 마세요.
 토론 주제에서 벗어나지 마세요.
 최대 {maxTurnLength}자 이내로 작성하세요.
+
+[출력 형식]
+[요약]
+[핵심 반박]
+[근거 또는 예시]
+[질문]
+[입장 상태]
 ```
 
 ### 16.3 promptSnapshot 저장
@@ -1485,7 +1568,10 @@ MVP에서는 동기 생성이면 바로 `COMPLETED`로 저장해도 된다.
 - 캐릭터 이름은 필수다.
 - 캐릭터 이름은 1자 이상 50자 이하로 제한한다.
 - description은 1000자 이하로 제한한다.
-- personality와 speechStyle은 JSON 문자열로 저장한다.
+- persona는 필수 구조화 JSON object다.
+- persona의 `identity`, `debateRole`, `coreValues`, `defaultStance`, `evidenceStyle`, `voiceStyle`, `boundaries`는 필수다.
+- persona의 `coreValues`, `boundaries.mustDo`, `boundaries.mustNotDo`는 빈 배열일 수 없다.
+- API와 프롬프트 런타임은 `personality`, `speechStyle`을 사용하지 않는다. DB의 legacy 컬럼은 후속 정리 전까지 호환용으로만 남긴다.
 - ownerId는 필수다.
 - 캐릭터 생성/수정 요청의 `category`는 활성 `CHARACTER` 카테고리 slug여야 한다.
 - 공개 캐릭터 탐색에는 `visibility=PUBLIC`인 캐릭터만 노출한다.
@@ -1495,6 +1581,7 @@ MVP에서는 동기 생성이면 바로 `COMPLETED`로 저장해도 된다.
 - model은 필수다.
 - model은 `MOCK`, `FAST`, `BALANCED`, `QUALITY` 중 하나여야 한다.
 - sourceCharacterId와 name은 필수다.
+- persona snapshot은 필수다.
 - position은 각각 0과 1이어야 한다.
 - MVP에서는 세션 생성 요청의 `participants` 배열 순서가 발화 순서를 결정한다.
 - 세션 소유자가 소유한 캐릭터 또는 `PUBLIC` 캐릭터만 참가자로 선택할 수 있다.

@@ -25,18 +25,17 @@ CLI는 `com.example.aichat.*.application` use case와 계산용 `debate` helper�
 ### Create
 
 ```powershell
-aichat --output json character create --owner-id 1 --name "합리주의 미식가" --description "논리적이고 차분하게 음식 취향을 분석하는 캐릭터" --personality "{\"rationality\":90}" --speech-style "{\"tone\":\"차분함\"}" --visibility PRIVATE
+aichat --output json character create --owner-id 1 --name "합리주의 미식가" --description "논리적이고 차분하게 음식 취향을 분석하는 캐릭터" --persona "{\"identity\":\"합리주의 미식가\",\"debateRole\":\"현실성 검증자\",\"coreValues\":[\"실증성\"],\"expertise\":[\"음식 문화\"],\"defaultStance\":\"취향보다 실행 조건을 먼저 본다.\",\"evidenceStyle\":\"비교 사례와 근거를 우선한다.\",\"debateBehavior\":[\"상대 주장의 전제를 확인한다.\"],\"voiceStyle\":{\"tone\":\"차분함\",\"sentenceLength\":\"중간\",\"rhetoricalStyle\":\"질문과 구조적 반박 중심\",\"signaturePhrases\":[]},\"boundaries\":{\"mustDo\":[\"상대 주장을 먼저 요약한다.\"],\"mustNotDo\":[\"인신공격하지 않는다.\"]},\"exampleLines\":[]}" --visibility PRIVATE
 ```
 
 - Required:
   - `--owner-id`
   - `--name`
+  - `--persona`
 - Optional:
   - `--description`
-  - `--personality`
-  - `--speech-style`
   - `--visibility`
-- `personality`와 `speech-style`은 raw JSON 문자열로 받는다.
+- `persona`는 구조화 raw JSON 문자열로 받는다.
 
 ### Get
 
@@ -67,8 +66,7 @@ aichat character update 1 --name "새 이름" --visibility PUBLIC
 - Optional:
   - `--name`
   - `--description`
-  - `--personality`
-  - `--speech-style`
+  - `--persona`
   - `--visibility`
 - 생략된 필드는 기존 값을 유지한다.
 
@@ -150,7 +148,7 @@ aichat debate next-turn --turn-index 3 --participant-count 2 --max-rounds 5
 
 - `CHARACTER_NOT_FOUND`, `USER_NOT_FOUND`, and `DEBATE_SESSION_NOT_FOUND` are returned when a requested resource does not exist.
 - CLI input validation failures use `INVALID_ARGUMENT`.
-- Invalid JSON input for `--personality`, `--speech-style`, or `--participant` is rejected before calling the use case.
+- Invalid JSON input for `--persona` or `--participant` is rejected before calling the use case.
 
 ## Notes For Agents
 

@@ -12,6 +12,7 @@ import com.example.aichat.debate.application.CompleteDebateSessionUseCase;
 import com.example.aichat.debate.domain.DebateFormat;
 import com.example.aichat.debate.domain.DebateSessionStatus;
 import com.example.aichat.debate.domain.ParticipantModel;
+import com.example.aichat.support.PersonaFixtures;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -104,8 +105,10 @@ class DebateSessionControllerWebMvcTest {
                 .andExpect(jsonPath("$.participants[0].position").value(0))
                 .andExpect(jsonPath("$.participants[0].name").value("합리주의 미식가"))
                 .andExpect(jsonPath("$.participants[0].model").value("FAST"))
-                .andExpect(jsonPath("$.participants[0].personality.rationality").value(90))
-                .andExpect(jsonPath("$.participants[0].speechStyle.tone").value("차분함"))
+                .andExpect(jsonPath("$.participants[0].persona.identity").value("합리주의 미식가"))
+                .andExpect(jsonPath("$.participants[0].persona.voiceStyle.tone").value("차분함"))
+                .andExpect(jsonPath("$.participants[0].personality").doesNotExist())
+                .andExpect(jsonPath("$.participants[0].speechStyle").doesNotExist())
                 .andExpect(jsonPath("$.participants[1].sourceCharacterId").value(10))
                 .andExpect(jsonPath("$.participants[1].position").value(1))
                 .andExpect(jsonPath("$.participants[1].model").value("QUALITY"));
@@ -207,8 +210,7 @@ class DebateSessionControllerWebMvcTest {
                 ParticipantModel.FAST,
                 "합리주의 미식가",
                 "논리적인 캐릭터",
-                "{\"rationality\":90}",
-                "{\"tone\":\"차분함\"}"
+                PersonaFixtures.rationalGourmetJson()
         );
         DebateParticipantView second = new DebateParticipantView(
                 2L,
@@ -217,8 +219,7 @@ class DebateSessionControllerWebMvcTest {
                 ParticipantModel.QUALITY,
                 "합리주의 미식가",
                 "논리적인 캐릭터",
-                "{\"rationality\":90}",
-                "{\"tone\":\"차분함\"}"
+                PersonaFixtures.rationalGourmetJson()
         );
 
         return new DebateSessionView(

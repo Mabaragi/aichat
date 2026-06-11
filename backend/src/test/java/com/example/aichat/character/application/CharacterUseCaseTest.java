@@ -4,13 +4,12 @@ import com.example.aichat.category.application.CategoryResolver;
 import com.example.aichat.category.domain.Category;
 import com.example.aichat.category.domain.CategoryRepository;
 import com.example.aichat.category.domain.CategoryScope;
-import com.example.aichat.character.domain.Personality;
-import com.example.aichat.character.domain.SpeechStyle;
 import com.example.aichat.character.infrastructure.InMemoryCharacterRepository;
 import com.example.aichat.common.time.TimeProvider;
 import com.example.aichat.common.security.RequestActor;
 import com.example.aichat.common.exception.BusinessException;
 import com.example.aichat.common.exception.ErrorCode;
+import com.example.aichat.support.PersonaFixtures;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -50,15 +49,13 @@ class CharacterUseCaseTest {
                 1L,
                 "합리주의 미식가",
                 "논리적이고 차분하게 음식 취향을 분석하는 캐릭터",
-                Personality.of("{\"rationality\":90}"),
-                SpeechStyle.of("{\"tone\":\"차분함\"}"),
+                PersonaFixtures.rationalGourmet(),
                 null
         ));
 
         assertThat(created.id()).isEqualTo(1L);
         assertThat(created.visibility()).isEqualTo("PRIVATE");
-        assertThat(created.personality()).isEqualTo("{\"rationality\":90}");
-        assertThat(created.speechStyle()).isEqualTo("{\"tone\":\"차분함\"}");
+        assertThat(created.persona()).isEqualTo(PersonaFixtures.rationalGourmetJson());
 
         CharacterView fetched = getCharacterUseCase.execute(created.id());
         assertThat(fetched.name()).isEqualTo("합리주의 미식가");
@@ -70,15 +67,13 @@ class CharacterUseCaseTest {
                 created.id(),
                 "새 이름",
                 null,
-                Personality.of("{\"rationality\":95}"),
-                null,
+                PersonaFixtures.empathetic(),
                 "PUBLIC"
         ));
 
         assertThat(updated.name()).isEqualTo("새 이름");
         assertThat(updated.visibility()).isEqualTo("PUBLIC");
-        assertThat(updated.personality()).isEqualTo("{\"rationality\":95}");
-        assertThat(updated.speechStyle()).isEqualTo("{\"tone\":\"차분함\"}");
+        assertThat(updated.persona()).isEqualTo(PersonaFixtures.empatheticJson());
 
         DeleteCharacterResult deleted = deleteCharacterUseCase.execute(created.id());
         assertThat(deleted.characterId()).isEqualTo(created.id());
@@ -117,7 +112,6 @@ class CharacterUseCaseTest {
                 "changed",
                 null,
                 null,
-                null,
                 null
         )));
         assertNotFound(() -> deleteCharacterUseCase.execute(otherUser, privateCharacter.id()));
@@ -128,8 +122,7 @@ class CharacterUseCaseTest {
                 1L,
                 name,
                 null,
-                null,
-                null,
+                PersonaFixtures.rationalGourmet(),
                 visibility
         ));
     }

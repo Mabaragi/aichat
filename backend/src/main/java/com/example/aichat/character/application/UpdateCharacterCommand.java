@@ -1,7 +1,6 @@
 package com.example.aichat.character.application;
 
-import com.example.aichat.character.domain.Personality;
-import com.example.aichat.character.domain.SpeechStyle;
+import com.example.aichat.character.domain.Persona;
 import com.example.aichat.common.security.RequestActor;
 
 public record UpdateCharacterCommand(
@@ -10,20 +9,17 @@ public record UpdateCharacterCommand(
         String category,
         String name,
         String description,
-        Personality personality,
-        SpeechStyle speechStyle,
+        Persona persona,
         String visibility
 ) {
     public UpdateCharacterCommand(RequestActor actor, Long characterId, String name,
-                                  String description, Personality personality,
-                                  SpeechStyle speechStyle, String visibility) {
-        this(actor, characterId, null, name, description, personality, speechStyle, visibility);
+                                  String description, Persona persona, String visibility) {
+        this(actor, characterId, null, name, description, persona, visibility);
     }
 
     public UpdateCharacterCommand(Long characterId, String name, String description,
-                                  Personality personality, SpeechStyle speechStyle,
-                                  String visibility) {
+                                  Persona persona, String visibility) {
         this(RequestActor.system(), characterId, null, name, description,
-                personality, speechStyle, visibility);
+                persona, visibility);
     }
 }

@@ -60,18 +60,21 @@ class OpenApiDocumentationIntegrationTest {
                 .andExpect(jsonPath("$.components.schemas.DebateSessionResponse").exists())
                 .andExpect(jsonPath("$.components.schemas.StartDebateSessionResponse").exists())
                 .andExpect(jsonPath("$.components.schemas.CompleteDebateSessionResponse").exists())
+                .andExpect(jsonPath("$.components.schemas.PersonaPayload").exists())
+                .andExpect(jsonPath("$.components.schemas.PersonaPayload"
+                        + ".properties.identity.type").value("string"))
+                .andExpect(jsonPath("$.components.schemas.PersonaPayload"
+                        + ".properties.voiceStyle.$ref").exists())
                 .andExpect(jsonPath("$.components.schemas.CreateCharacterRequest"
-                        + ".properties.personality.type").value("object"))
+                        + ".properties.persona.$ref").exists())
                 .andExpect(jsonPath("$.components.schemas.CreateCharacterRequest"
-                        + ".properties.speechStyle.type").value("object"))
+                        + ".properties.personality").doesNotExist())
+                .andExpect(jsonPath("$.components.schemas.CreateCharacterRequest"
+                        + ".properties.speechStyle").doesNotExist())
                 .andExpect(jsonPath("$.components.schemas.CharacterResponse"
-                        + ".properties.personality.type").value("object"))
-                .andExpect(jsonPath("$.components.schemas.CharacterResponse"
-                        + ".properties.speechStyle.type").value("object"))
+                        + ".properties.persona.$ref").exists())
                 .andExpect(jsonPath("$.components.schemas.DebateSessionParticipantResponse"
-                        + ".properties.personality.type").value("object"))
-                .andExpect(jsonPath("$.components.schemas.DebateSessionParticipantResponse"
-                        + ".properties.speechStyle.type").value("object"))
+                        + ".properties.persona.$ref").exists())
                 .andExpect(jsonPath("$.components.schemas.DebateTurnResponse").exists())
                 .andExpect(jsonPath("$.components.schemas.GenerateTurnResponse").exists())
                 .andExpect(jsonPath("$.components.schemas.SharedContentResponse").doesNotExist());

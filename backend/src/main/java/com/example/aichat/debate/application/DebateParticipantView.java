@@ -10,8 +10,7 @@ public record DebateParticipantView(
         ParticipantModel model,
         String name,
         String description,
-        String personality,
-        String speechStyle
+        String persona
 ) {
 
     public static DebateParticipantView from(DebateParticipant participant) {
@@ -22,8 +21,7 @@ public record DebateParticipantView(
                 participant.getModel(),
                 participant.getName(),
                 participant.getDescription(),
-                participant.getPersonality(),
-                participant.getSpeechStyle()
+                participant.getPersona()
         );
     }
 }

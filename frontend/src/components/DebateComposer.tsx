@@ -24,6 +24,7 @@ type StoredDebateState = {
   session: DebateSession;
   turns: DebateTurn[];
 };
+type DebateParticipantSnapshot = NonNullable<DebateSession["participants"]>[number];
 
 export function DebateComposer({ characters, categories }: DebateComposerProps) {
   const firstCharacterId = characters[0]?.id;
@@ -498,10 +499,8 @@ function DebateResult({
               </small>
             </div>
             <dl>
-              <dt>성격</dt>
-              <dd>{formatSnapshot(participant.personality)}</dd>
-              <dt>말투</dt>
-              <dd>{formatSnapshot(participant.speechStyle)}</dd>
+              <dt>페르소나</dt>
+              <dd>{formatPersona(participant.persona)}</dd>
             </dl>
           </article>
         ))}
@@ -524,6 +523,10 @@ function DebateResult({
   );
 }
 
-function formatSnapshot(value: Record<string, unknown> | undefined | null) {
-  return value ? JSON.stringify(value) : "미설정";
+function formatPersona(value: DebateParticipantSnapshot["persona"]) {
+  if (!value) {
+    return "미설정";
+  }
+  const tone = value.voiceStyle?.tone ? ` · ${value.voiceStyle.tone}` : "";
+  return `${value.identity ?? "페르소나"} / ${value.debateRole ?? "토론 참가자"}${tone}`;
 }

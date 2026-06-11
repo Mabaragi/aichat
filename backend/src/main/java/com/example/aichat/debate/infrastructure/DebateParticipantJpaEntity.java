@@ -59,20 +59,22 @@ public class DebateParticipantJpaEntity {
     @Column(name = "speech_style", columnDefinition = "TEXT")
     private String speechStyle;
 
+    @Column(columnDefinition = "TEXT")
+    private String persona;
+
     protected DebateParticipantJpaEntity() {
     }
 
     DebateParticipantJpaEntity(Integer id, Long sourceCharacterId, int position,
                                ParticipantModel model, String name, String description,
-                               String personality, String speechStyle) {
+                               String persona) {
         this.id = id;
         this.sourceCharacterId = sourceCharacterId;
         this.position = position;
         this.model = model;
         this.name = name;
         this.description = description;
-        this.personality = personality;
-        this.speechStyle = speechStyle;
+        this.persona = persona;
     }
 
     void attachTo(DebateSessionJpaEntity session) {
@@ -103,11 +105,7 @@ public class DebateParticipantJpaEntity {
         return description;
     }
 
-    String personality() {
-        return personality;
-    }
-
-    String speechStyle() {
-        return speechStyle;
+    String persona() {
+        return persona;
     }
 }

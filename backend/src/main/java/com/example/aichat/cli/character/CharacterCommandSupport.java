@@ -1,7 +1,6 @@
 package com.example.aichat.cli.character;
 
-import com.example.aichat.character.domain.Personality;
-import com.example.aichat.character.domain.SpeechStyle;
+import com.example.aichat.character.domain.Persona;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -23,13 +22,8 @@ final class CharacterCommandSupport {
         }
     }
 
-    static Personality toPersonality(ObjectMapper objectMapper, String rawJson) {
-        String normalizedJson = normalizeJson(objectMapper, rawJson, "--personality");
-        return normalizedJson == null ? null : Personality.of(normalizedJson);
-    }
-
-    static SpeechStyle toSpeechStyle(ObjectMapper objectMapper, String rawJson) {
-        String normalizedJson = normalizeJson(objectMapper, rawJson, "--speech-style");
-        return normalizedJson == null ? null : SpeechStyle.of(normalizedJson);
+    static Persona toPersona(ObjectMapper objectMapper, String rawJson) {
+        String normalizedJson = normalizeJson(objectMapper, rawJson, "--persona");
+        return normalizedJson == null ? null : Persona.of(normalizedJson);
     }
 }

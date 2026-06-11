@@ -1,12 +1,16 @@
 import { getServerConfig } from "@/server/env";
 import { upstreamUnavailable } from "@/server/errors";
+import { mockBackendFetch } from "@/server/mock-api";
 import { NextResponse } from "next/server";
 
 export async function backendFetch(
   path: string,
   init: RequestInit = {},
 ): Promise<Response | NextResponse> {
-  const { backendBaseUrl } = getServerConfig();
+  const { apiMode, backendBaseUrl } = getServerConfig();
+  if (apiMode === "mock") {
+    return mockBackendFetch(path, init);
+  }
 
   try {
     return await fetch(`${backendBaseUrl}${path}`, {

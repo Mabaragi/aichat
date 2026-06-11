@@ -1,7 +1,6 @@
 package com.example.aichat.character.application;
 
-import com.example.aichat.character.domain.Personality;
-import com.example.aichat.character.domain.SpeechStyle;
+import com.example.aichat.character.domain.Persona;
 import com.example.aichat.common.security.RequestActor;
 
 public record CreateCharacterCommand(
@@ -10,14 +9,12 @@ public record CreateCharacterCommand(
         String category,
         String name,
         String description,
-        Personality personality,
-        SpeechStyle speechStyle,
+        Persona persona,
         String visibility
 ) {
     public CreateCharacterCommand(Long ownerId, String name, String description,
-                                  Personality personality, SpeechStyle speechStyle,
-                                  String visibility) {
+                                  Persona persona, String visibility) {
         this(RequestActor.system(), ownerId, null, name, description,
-                personality, speechStyle, visibility);
+                persona, visibility);
     }
 }

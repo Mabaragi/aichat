@@ -7,6 +7,7 @@ import com.example.aichat.debate.domain.DebateParticipant;
 import com.example.aichat.debate.domain.DebateSession;
 import com.example.aichat.debate.domain.DebateSessionRepository;
 import com.example.aichat.debate.domain.ParticipantModel;
+import com.example.aichat.support.PersonaFixtures;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -123,8 +124,7 @@ class DebateSessionLifecycleUseCaseTest {
                                 ParticipantModel.FAST,
                                 "첫 번째 캐릭터",
                                 "논리적인 캐릭터",
-                                "{\"rationality\":90}",
-                                "{\"tone\":\"차분함\"}"
+                                PersonaFixtures.rationalGourmetJson()
                         ),
                         DebateParticipant.create(
                                 20L,
@@ -132,8 +132,7 @@ class DebateSessionLifecycleUseCaseTest {
                                 ParticipantModel.QUALITY,
                                 "두 번째 캐릭터",
                                 "직관적인 캐릭터",
-                                "{\"rationality\":30}",
-                                "{\"tone\":\"도전적\"}"
+                                PersonaFixtures.empatheticJson()
                         )
                 ),
                 CREATED_AT

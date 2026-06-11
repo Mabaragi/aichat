@@ -15,6 +15,27 @@ const categories = [
   { id: 1, scope: "DEBATE" as const, slug: "food", name: "음식" },
 ];
 
+const persona = {
+  identity: "합리적 미식가",
+  debateRole: "데이터 분석가",
+  coreValues: ["실증성"],
+  expertise: ["음식 문화"],
+  defaultStance: "근거를 먼저 본다.",
+  evidenceStyle: "통계와 사례를 사용한다.",
+  debateBehavior: ["상대 주장을 요약한다."],
+  voiceStyle: {
+    tone: "차분함",
+    sentenceLength: "중간",
+    rhetoricalStyle: "구조적 반박 중심",
+    signaturePhrases: [],
+  },
+  boundaries: {
+    mustDo: ["상대 주장을 먼저 요약한다."],
+    mustNotDo: ["인신공격하지 않는다."],
+  },
+  exampleLines: [],
+};
+
 describe("DebateComposer", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
@@ -34,7 +55,7 @@ describe("DebateComposer", () => {
             position: 0,
             name: "합리적 미식가",
             model: "FAST",
-            personality: { rationality: 80 },
+            persona,
           },
           {
             id: 2,
@@ -42,7 +63,7 @@ describe("DebateComposer", () => {
             position: 1,
             name: "합리적 미식가",
             model: "QUALITY",
-            speechStyle: { tone: "calm" },
+            persona,
           },
         ],
       }),

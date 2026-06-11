@@ -406,6 +406,11 @@ export interface components {
             /** @description Current authenticated user. */
             user?: components["schemas"]["UserResponse"];
         };
+        /** @description Required and forbidden debate behavior. */
+        Boundaries: {
+            mustDo: string[];
+            mustNotDo: string[];
+        };
         /** @description Category summary response. */
         CategorySummaryResponse: {
             /**
@@ -463,26 +468,8 @@ export interface components {
              * @example 1
              */
             ownerId?: number;
-            /**
-             * @description Personality traits object.
-             * @example {
-             *       "humor": 30,
-             *       "rationality": 90
-             *     }
-             */
-            personality?: {
-                [key: string]: unknown;
-            };
-            /**
-             * @description Speech style object.
-             * @example {
-             *       "formality": "high",
-             *       "tone": "calm"
-             *     }
-             */
-            speechStyle?: {
-                [key: string]: unknown;
-            };
+            /** @description Structured persona rules used during debate. */
+            persona?: components["schemas"]["PersonaPayload"];
             /**
              * Format: date-time
              * @description Timestamp when the character was last updated.
@@ -534,26 +521,8 @@ export interface components {
              * @example Rational Gourmet
              */
             name: string;
-            /**
-             * @description Arbitrary personality traits object.
-             * @example {
-             *       "humor": 30,
-             *       "rationality": 90
-             *     }
-             */
-            personality?: {
-                [key: string]: unknown;
-            };
-            /**
-             * @description Arbitrary speech style object.
-             * @example {
-             *       "formality": "high",
-             *       "tone": "calm"
-             *     }
-             */
-            speechStyle?: {
-                [key: string]: unknown;
-            };
+            /** @description Structured persona rules used during debate. */
+            persona: components["schemas"]["PersonaPayload"];
             /**
              * @description Character visibility. Defaults to PRIVATE when omitted.
              * @example PRIVATE
@@ -649,15 +618,8 @@ export interface components {
              * @example Rational Gourmet
              */
             name?: string;
-            /**
-             * @description Participant personality snapshot.
-             * @example {
-             *       "rationality": 90
-             *     }
-             */
-            personality?: {
-                [key: string]: unknown;
-            };
+            /** @description Participant persona snapshot. */
+            persona?: components["schemas"]["PersonaPayload"];
             /**
              * Format: int32
              * @description Zero-based participant position.
@@ -670,15 +632,6 @@ export interface components {
              * @example 10
              */
             sourceCharacterId?: number;
-            /**
-             * @description Participant speech style snapshot.
-             * @example {
-             *       "tone": "calm"
-             *     }
-             */
-            speechStyle?: {
-                [key: string]: unknown;
-            };
         };
         /** @description Debate session response. */
         DebateSessionResponse: {
@@ -925,6 +878,35 @@ export interface components {
              */
             password: string;
         };
+        /** @description Structured character persona rules used during debate. */
+        PersonaPayload: {
+            boundaries: components["schemas"]["Boundaries"];
+            coreValues: string[];
+            debateBehavior: string[];
+            /**
+             * @description Role this character plays in a debate.
+             * @example 현실성 검증자
+             */
+            debateRole: string;
+            /**
+             * @description Default stance formation rule.
+             * @example 선의보다 실행 가능성과 부작용을 먼저 본다.
+             */
+            defaultStance: string;
+            /**
+             * @description Preferred evidence style.
+             * @example 통계, 비교 사례, 비용-편익 분석을 선호한다.
+             */
+            evidenceStyle: string;
+            exampleLines: string[];
+            expertise: string[];
+            /**
+             * @description Character identity.
+             * @example 정책 분석가
+             */
+            identity: string;
+            voiceStyle: components["schemas"]["VoiceStyle"];
+        };
         PublicCharacterPageResponse: {
             hasNext?: boolean;
             items?: components["schemas"]["CharacterResponse"][];
@@ -1014,24 +996,8 @@ export interface components {
              * @example Rational Gourmet
              */
             name?: string;
-            /**
-             * @description Updated personality traits object.
-             * @example {
-             *       "empathy": 80
-             *     }
-             */
-            personality?: {
-                [key: string]: unknown;
-            };
-            /**
-             * @description Updated speech style object.
-             * @example {
-             *       "tone": "formal"
-             *     }
-             */
-            speechStyle?: {
-                [key: string]: unknown;
-            };
+            /** @description Updated structured persona rules used during debate. */
+            persona?: components["schemas"]["PersonaPayload"];
             /**
              * @description Updated character visibility.
              * @example PUBLIC
@@ -1063,6 +1029,25 @@ export interface components {
              * @example owner
              */
             nickname?: string;
+        };
+        /** @description Persona voice style. */
+        VoiceStyle: {
+            /**
+             * @description Rhetorical style.
+             * @example 질문과 구조적 반박 중심
+             */
+            rhetoricalStyle: string;
+            /**
+             * @description Sentence length preference.
+             * @example 중간
+             */
+            sentenceLength: string;
+            signaturePhrases: string[];
+            /**
+             * @description Tone.
+             * @example 차분하지만 날카로움
+             */
+            tone: string;
         };
     };
     responses: never;

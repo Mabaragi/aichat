@@ -28,8 +28,7 @@ public class InMemoryCharacterRepository implements CharacterRepository {
                 character.getCategoryId(),
                 character.getName(),
                 character.getDescription(),
-                character.getPersonality(),
-                character.getSpeechStyle(),
+                character.getPersona(),
                 character.getVisibility(),
                 character.getCreatedAt(),
                 character.getUpdatedAt())

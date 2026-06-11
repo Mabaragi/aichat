@@ -8,8 +8,7 @@ import com.example.aichat.character.application.GetCharacterUseCase;
 import com.example.aichat.character.application.ListCharactersUseCase;
 import com.example.aichat.character.application.UpdateCharacterCommand;
 import com.example.aichat.character.application.UpdateCharacterUseCase;
-import com.example.aichat.character.domain.Personality;
-import com.example.aichat.character.domain.SpeechStyle;
+import com.example.aichat.character.domain.Persona;
 import com.example.aichat.common.exception.ErrorResponse;
 import com.example.aichat.common.security.RequestActor;
 import com.example.aichat.common.security.WebActor;
@@ -39,8 +38,6 @@ import org.springframework.security.core.Authentication;
 import tools.jackson.databind.ObjectMapper;
 
 import java.util.List;
-import java.util.Map;
-
 @RestController
 @RequestMapping("/api/characters")
 @Tag(name = "Characters", description = "Create, read, update, and delete debate characters.")
@@ -193,8 +190,7 @@ public class CharacterController {
                 request.category(),
                 request.name(),
                 request.description(),
-                toPersonality(request.personality()),
-                toSpeechStyle(request.speechStyle()),
+                toPersona(request.persona()),
                 request.visibility()
         );
     }
@@ -207,8 +203,7 @@ public class CharacterController {
                 request.category(),
                 request.name(),
                 request.description(),
-                toPersonality(request.personality()),
-                toSpeechStyle(request.speechStyle()),
+                toPersona(request.persona()),
                 request.visibility()
         );
     }
@@ -217,15 +212,11 @@ public class CharacterController {
         return CharacterResponse.from(view, objectMapper);
     }
 
-    private Personality toPersonality(Map<String, Object> value) {
-        return value == null ? null : Personality.of(toJson(value));
+    private Persona toPersona(PersonaPayload value) {
+        return value == null ? null : Persona.of(toJson(value));
     }
 
-    private SpeechStyle toSpeechStyle(Map<String, Object> value) {
-        return value == null ? null : SpeechStyle.of(toJson(value));
-    }
-
-    private String toJson(Map<String, Object> value) {
+    private String toJson(Object value) {
         return objectMapper.writeValueAsString(value);
     }
 }

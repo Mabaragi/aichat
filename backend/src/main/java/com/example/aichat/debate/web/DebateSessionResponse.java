@@ -1,19 +1,18 @@
 package com.example.aichat.debate.web;
 
 import com.example.aichat.category.web.CategorySummaryResponse;
+import com.example.aichat.character.web.CharacterResponse;
+import com.example.aichat.character.web.PersonaPayload;
 import com.example.aichat.debate.application.DebateParticipantView;
 import com.example.aichat.debate.application.DebateSessionView;
 import com.example.aichat.debate.domain.DebateFormat;
 import com.example.aichat.debate.domain.DebateSessionStatus;
 import com.example.aichat.debate.domain.ParticipantModel;
 import io.swagger.v3.oas.annotations.media.Schema;
-import tools.jackson.core.JacksonException;
-import tools.jackson.core.type.TypeReference;
 import tools.jackson.databind.ObjectMapper;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Map;
 
 @Schema(description = "Debate session response.")
 public record DebateSessionResponse(
@@ -96,12 +95,8 @@ public record DebateSessionResponse(
             @Schema(description = "Participant description.",
                     example = "A calm debater who analyzes food choices logically.")
             String description,
-            @Schema(description = "Participant personality snapshot.",
-                    example = "{\"rationality\":90}")
-            Map<String, Object> personality,
-            @Schema(description = "Participant speech style snapshot.",
-                    example = "{\"tone\":\"calm\"}")
-            Map<String, Object> speechStyle
+            @Schema(description = "Participant persona snapshot.")
+            PersonaPayload persona
     ) {
 
         private static ParticipantResponse from(DebateParticipantView view,
@@ -113,22 +108,8 @@ public record DebateSessionResponse(
                     view.model(),
                     view.name(),
                     view.description(),
-                    toJsonObject(objectMapper, view.personality()),
-                    toJsonObject(objectMapper, view.speechStyle())
+                    CharacterResponse.toPersona(objectMapper, view.persona())
             );
-        }
-    }
-
-    private static Map<String, Object> toJsonObject(ObjectMapper objectMapper, String rawJson) {
-        if (rawJson == null) {
-            return null;
-        }
-
-        try {
-            return objectMapper.readValue(rawJson, new TypeReference<>() {
-            });
-        } catch (JacksonException exception) {
-            throw new IllegalStateException("Failed to render debate participant snapshot", exception);
         }
     }
 }

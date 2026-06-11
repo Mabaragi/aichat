@@ -6,7 +6,8 @@
     "node": ">=24 <25"
   },
   "scripts": {
-    "dev": "next dev",
+    "dev": "node scripts/next-dev.mjs",
+    "dev:backend": "node scripts/next-dev.mjs --api-mode=backend",
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",

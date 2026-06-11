@@ -9,8 +9,7 @@ import com.example.aichat.character.application.ListCharactersResult;
 import com.example.aichat.character.application.ListCharactersUseCase;
 import com.example.aichat.character.application.UpdateCharacterCommand;
 import com.example.aichat.character.application.UpdateCharacterUseCase;
-import com.example.aichat.character.domain.Personality;
-import com.example.aichat.character.domain.SpeechStyle;
+import com.example.aichat.support.PersonaFixtures;
 import com.example.aichat.common.security.RequestActor;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -94,13 +93,25 @@ class CharacterControllerWebMvcTest {
                                 {
                                   "name": "합리주의 미식가",
                                   "description": "논리적이고 차분하게 음식 취향을 분석하는 캐릭터",
-                                  "personality": {
-                                    "rationality": 90,
-                                    "humor": 30
-                                  },
-                                  "speechStyle": {
-                                    "tone": "차분함",
-                                    "formality": "높음"
+                                  "persona": {
+                                    "identity": "합리주의 미식가",
+                                    "debateRole": "현실성 검증자",
+                                    "coreValues": ["실증성", "논리"],
+                                    "expertise": ["음식 문화"],
+                                    "defaultStance": "취향보다 실행 조건과 경험 품질을 먼저 본다.",
+                                    "evidenceStyle": "비교 사례와 비용-편익 분석을 선호한다.",
+                                    "debateBehavior": ["상대 주장의 숨은 전제를 찾는다."],
+                                    "voiceStyle": {
+                                      "tone": "차분함",
+                                      "sentenceLength": "중간",
+                                      "rhetoricalStyle": "질문과 구조적 반박 중심",
+                                      "signaturePhrases": ["핵심은 실행 조건입니다."]
+                                    },
+                                    "boundaries": {
+                                      "mustDo": ["상대 주장을 먼저 요약한다.", "불확실한 사실은 단정하지 않는다."],
+                                      "mustNotDo": ["인신공격하지 않는다.", "출처 없는 수치를 만들지 않는다."]
+                                    },
+                                    "exampleLines": ["그 주장의 선의는 이해하지만, 실행 조건을 봐야 합니다."]
                                   },
                                   "visibility": "PRIVATE"
                                 }
@@ -110,6 +121,9 @@ class CharacterControllerWebMvcTest {
                 .andExpect(jsonPath("$.ownerId").value(1))
                 .andExpect(jsonPath("$.name").value("합리주의 미식가"))
                 .andExpect(jsonPath("$.description").value("논리적이고 차분하게 음식 취향을 분석하는 캐릭터"))
+                .andExpect(jsonPath("$.persona.identity").value("합리주의 미식가"))
+                .andExpect(jsonPath("$.personality").doesNotExist())
+                .andExpect(jsonPath("$.speechStyle").doesNotExist())
                 .andExpect(jsonPath("$.visibility").value("PRIVATE"))
                 .andExpect(jsonPath("$.createdAt").value("2026-06-08T12:00:00"));
 
@@ -121,8 +135,7 @@ class CharacterControllerWebMvcTest {
         assertThat(command.actor()).isEqualTo(RequestActor.authenticated(1L));
         assertThat(command.name()).isEqualTo("합리주의 미식가");
         assertThat(command.description()).isEqualTo("논리적이고 차분하게 음식 취향을 분석하는 캐릭터");
-        assertThat(command.personality()).isEqualTo(Personality.of("{\"rationality\":90,\"humor\":30}"));
-        assertThat(command.speechStyle()).isEqualTo(SpeechStyle.of("{\"tone\":\"차분함\",\"formality\":\"높음\"}"));
+        assertThat(command.persona()).isEqualTo(PersonaFixtures.rationalGourmet());
         assertThat(command.visibility()).isEqualTo("PRIVATE");
     }
 
@@ -175,8 +188,25 @@ class CharacterControllerWebMvcTest {
                         .content("""
                                 {
                                   "name": "수정 캐릭터",
-                                  "personality": {
-                                    "empathy": 80
+                                  "persona": {
+                                    "identity": "공감형 중재자",
+                                    "debateRole": "중재자",
+                                    "coreValues": ["공정성", "상호 이해"],
+                                    "expertise": ["갈등 조정"],
+                                    "defaultStance": "양쪽 주장의 강점을 먼저 확인한다.",
+                                    "evidenceStyle": "균형 잡힌 사례와 원칙을 함께 본다.",
+                                    "debateBehavior": ["공통분모를 찾는다."],
+                                    "voiceStyle": {
+                                      "tone": "친근함",
+                                      "sentenceLength": "중간",
+                                      "rhetoricalStyle": "요약과 조율 중심",
+                                      "signaturePhrases": []
+                                    },
+                                    "boundaries": {
+                                      "mustDo": ["상대 주장을 먼저 요약한다."],
+                                      "mustNotDo": ["상대 주장을 왜곡하지 않는다."]
+                                    },
+                                    "exampleLines": []
                                   },
                                   "visibility": "PUBLIC"
                                 }
@@ -195,8 +225,7 @@ class CharacterControllerWebMvcTest {
         assertThat(command.actor()).isEqualTo(RequestActor.authenticated(1L));
         assertThat(command.name()).isEqualTo("수정 캐릭터");
         assertThat(command.description()).isNull();
-        assertThat(command.personality()).isEqualTo(Personality.of("{\"empathy\":80}"));
-        assertThat(command.speechStyle()).isNull();
+        assertThat(command.persona()).isEqualTo(PersonaFixtures.empathetic());
         assertThat(command.visibility()).isEqualTo("PUBLIC");
     }
 
@@ -216,8 +245,7 @@ class CharacterControllerWebMvcTest {
                 1L,
                 name,
                 "논리적이고 차분하게 음식 취향을 분석하는 캐릭터",
-                "{\"rationality\":90}",
-                "{\"tone\":\"차분함\"}",
+                PersonaFixtures.rationalGourmetJson(),
                 visibility,
                 FIXED_TIME,
                 FIXED_TIME

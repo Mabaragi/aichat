@@ -2,8 +2,7 @@ package com.example.aichat.character.application;
 
 import com.example.aichat.category.application.CategorySummaryView;
 import com.example.aichat.character.domain.Character;
-import com.example.aichat.character.domain.Personality;
-import com.example.aichat.character.domain.SpeechStyle;
+import com.example.aichat.character.domain.Persona;
 
 import java.time.LocalDateTime;
 
@@ -13,18 +12,16 @@ public record CharacterView(
         CategorySummaryView category,
         String name,
         String description,
-        String personality,
-        String speechStyle,
+        String persona,
         String visibility,
         LocalDateTime createdAt,
         LocalDateTime updatedAt
 ) {
 
     public CharacterView(Long id, Long ownerId, String name, String description,
-                         String personality, String speechStyle, String visibility,
+                         String persona, String visibility,
                          LocalDateTime createdAt, LocalDateTime updatedAt) {
-        this(id, ownerId, null, name, description, personality, speechStyle,
-                visibility, createdAt, updatedAt);
+        this(id, ownerId, null, name, description, persona, visibility, createdAt, updatedAt);
     }
 
     public static CharacterView from(Character character) {
@@ -38,19 +35,14 @@ public record CharacterView(
                 category,
                 character.getName(),
                 character.getDescription(),
-                unwrap(character.getPersonality()),
-                unwrap(character.getSpeechStyle()),
+                unwrap(character.getPersona()),
                 character.getVisibility(),
                 character.getCreatedAt(),
                 character.getUpdatedAt()
         );
     }
 
-    private static String unwrap(Personality personality) {
-        return personality == null ? null : personality.value();
-    }
-
-    private static String unwrap(SpeechStyle speechStyle) {
-        return speechStyle == null ? null : speechStyle.value();
+    private static String unwrap(Persona persona) {
+        return persona == null ? null : persona.value();
     }
 }

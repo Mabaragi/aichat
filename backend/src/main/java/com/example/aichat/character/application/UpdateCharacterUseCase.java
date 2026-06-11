@@ -49,8 +49,7 @@ public class UpdateCharacterUseCase {
                 nextCategoryId,
                 command.name() != null ? command.name() : character.getName(),
                 command.description() != null ? command.description() : character.getDescription(),
-                command.personality() != null ? command.personality() : character.getPersonality(),
-                command.speechStyle() != null ? command.speechStyle() : character.getSpeechStyle(),
+                command.persona() != null ? command.persona() : character.getPersona(),
                 command.visibility() != null ? command.visibility() : character.getVisibility(),
                 timeProvider.now()
         );

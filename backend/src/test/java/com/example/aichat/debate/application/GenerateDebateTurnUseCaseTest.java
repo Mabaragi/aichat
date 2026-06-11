@@ -20,6 +20,7 @@ import com.example.aichat.generation.application.GenerationResult;
 import com.example.aichat.generation.application.TextGenerator;
 import com.example.aichat.generation.infrastructure.GenerationProperties;
 import com.example.aichat.generation.infrastructure.MockTextGenerator;
+import com.example.aichat.support.PersonaFixtures;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -155,8 +156,7 @@ class GenerateDebateTurnUseCaseTest {
                                 ParticipantModel.MOCK,
                                 "MOCK 참가자",
                                 "mock speaker",
-                                "{\"mood\":\"calm\"}",
-                                "{\"tone\":\"plain\"}"
+                                PersonaFixtures.rationalGourmetJson()
                         ),
                         new DebateParticipant(
                                 2L,
@@ -165,8 +165,7 @@ class GenerateDebateTurnUseCaseTest {
                                 ParticipantModel.FAST,
                                 "FAST 참가자",
                                 "fast speaker",
-                                "{\"mood\":\"sharp\"}",
-                                "{\"tone\":\"sharp\"}"
+                                PersonaFixtures.empatheticJson()
                         )
                 ),
                 CREATED_AT

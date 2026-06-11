@@ -57,6 +57,26 @@ class AuthSecurityIntegrationTest {
                         .content("""
                                 {
                                   "name": "private character",
+                                  "persona": {
+                                    "identity": "테스트 캐릭터",
+                                    "debateRole": "토론 참가자",
+                                    "coreValues": ["사실성"],
+                                    "expertise": [],
+                                    "defaultStance": "논제에 따라 입장을 형성한다.",
+                                    "evidenceStyle": "근거와 논리를 우선한다.",
+                                    "debateBehavior": [],
+                                    "voiceStyle": {
+                                      "tone": "차분함",
+                                      "sentenceLength": "중간",
+                                      "rhetoricalStyle": "논리적 반박 중심",
+                                      "signaturePhrases": []
+                                    },
+                                    "boundaries": {
+                                      "mustDo": ["상대 주장을 먼저 요약한다."],
+                                      "mustNotDo": ["인신공격하지 않는다."]
+                                    },
+                                    "exampleLines": []
+                                  },
                                   "visibility": "PRIVATE"
                                 }
                                 """))
@@ -165,6 +185,26 @@ class AuthSecurityIntegrationTest {
                         .content("""
                                 {
                                   "name": "private character",
+                                  "persona": {
+                                    "identity": "테스트 캐릭터",
+                                    "debateRole": "토론 참가자",
+                                    "coreValues": ["사실성"],
+                                    "expertise": [],
+                                    "defaultStance": "논제에 따라 입장을 형성한다.",
+                                    "evidenceStyle": "근거와 논리를 우선한다.",
+                                    "debateBehavior": [],
+                                    "voiceStyle": {
+                                      "tone": "차분함",
+                                      "sentenceLength": "중간",
+                                      "rhetoricalStyle": "논리적 반박 중심",
+                                      "signaturePhrases": []
+                                    },
+                                    "boundaries": {
+                                      "mustDo": ["상대 주장을 먼저 요약한다."],
+                                      "mustNotDo": ["인신공격하지 않는다."]
+                                    },
+                                    "exampleLines": []
+                                  },
                                   "visibility": "PRIVATE"
                                 }
                                 """))

@@ -34,7 +34,9 @@ character
 - `ownerId`는 필수다.
 - `name`은 필수이며 1자 이상 50자 이하여야 한다.
 - `description`은 선택값이며 1000자 이하여야 한다.
-- `personality`와 `speechStyle`은 도메인 내부에서는 값 객체로 다루고, 저장/응답 경계에서는 canonical JSON 문자열로 변환한다.
+- `persona`는 도메인 내부에서 값 객체로 다루고, 저장/응답 경계에서는 canonical JSON 문자열로 변환한다.
+- `persona`는 `identity`, `debateRole`, `coreValues`, `defaultStance`, `evidenceStyle`, `voiceStyle`, `boundaries`를 포함하는 구조화 JSON object다.
+- `coreValues`, `boundaries.mustDo`, `boundaries.mustNotDo`는 빈 배열일 수 없다.
 - `visibility`는 필수이며 초기 기본값은 `PRIVATE`로 둔다.
 - 생성 시 `createdAt`, `updatedAt`을 기록하고, 수정 시 `updatedAt`만 갱신한다.
 - 캐릭터 삭제는 우선 hard delete로 시작하되, 토론 세션 참조 정책이 정해지면 soft delete 전환 여부를 다시 판단한다.
@@ -59,7 +61,7 @@ character
 ## API 흐름
 
 - 생성: `POST /api/characters`
-  요청 DTO는 `ownerId`, `name`, `description`, `personality`, `speechStyle`, `visibility`를 받는다.
+  요청 DTO는 `name`, `category`, `description`, `persona`, `visibility`를 받는다. 소유자는 인증 principal에서 유도한다.
 - 목록 조회: `GET /api/characters?ownerId={ownerId}`
   MVP에서는 ownerId 기준 목록만 지원한다.
 - 단건 조회: `GET /api/characters/{characterId}`
@@ -78,7 +80,7 @@ character
    생성, 수정, 조회, 목록, 삭제 흐름이 repository 계약을 통해 동작하는지 검증한다. 없는 ID 조회와 삭제 실패도 포함한다.
 
 3. Repository 테스트
-   SQLite/JPA 설정에서 JSON 문자열 필드와 시간 필드가 저장/조회되는지 확인한다.
+   SQLite/JPA 설정에서 `persona` JSON 문자열 필드와 시간 필드가 저장/조회되는지 확인한다.
 
 4. Controller 테스트
    요청 validation, HTTP status, response shape를 확인한다. 도메인 규칙 자체를 controller 테스트에서 반복 검증하지 않는다.

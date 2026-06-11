@@ -6,8 +6,7 @@ import com.example.aichat.category.domain.Category;
 import com.example.aichat.category.domain.CategoryScope;
 import com.example.aichat.character.domain.Character;
 import com.example.aichat.character.domain.CharacterRepository;
-import com.example.aichat.character.domain.Personality;
-import com.example.aichat.character.domain.SpeechStyle;
+import com.example.aichat.character.domain.Persona;
 import com.example.aichat.common.exception.BusinessException;
 import com.example.aichat.common.exception.ErrorCode;
 import com.example.aichat.common.time.TimeProvider;
@@ -111,8 +110,7 @@ public class CreateDebateSessionUseCase {
                 command.model(),
                 character.getName(),
                 character.getDescription(),
-                unwrap(character.getPersonality()),
-                unwrap(character.getSpeechStyle())
+                unwrap(character.getPersona())
         );
     }
 
@@ -121,11 +119,7 @@ public class CreateDebateSessionUseCase {
                 || "PUBLIC".equals(character.getVisibility());
     }
 
-    private static String unwrap(Personality personality) {
-        return personality == null ? null : personality.value();
-    }
-
-    private static String unwrap(SpeechStyle speechStyle) {
-        return speechStyle == null ? null : speechStyle.value();
+    private static String unwrap(Persona persona) {
+        return persona == null ? null : persona.value();
     }
 }

@@ -11,16 +11,16 @@ public class DebateParticipant {
     private final ParticipantModel model;
     private final String name;
     private final String description;
-    private final String personality;
-    private final String speechStyle;
+    private final String persona;
 
     public DebateParticipant(Long id, Long sourceCharacterId, int position,
                              ParticipantModel model, String name, String description,
-                             String personality, String speechStyle) {
+                             String persona) {
         validateSourceCharacterId(sourceCharacterId);
         validatePosition(position);
         validateModel(model);
         validateName(name);
+        validatePersona(persona);
 
         this.id = id;
         this.sourceCharacterId = sourceCharacterId;
@@ -28,14 +28,12 @@ public class DebateParticipant {
         this.model = model;
         this.name = name;
         this.description = description;
-        this.personality = personality;
-        this.speechStyle = speechStyle;
+        this.persona = persona;
     }
 
     public static DebateParticipant create(Long sourceCharacterId, int position,
                                             ParticipantModel model, String name,
-                                            String description, String personality,
-                                            String speechStyle) {
+                                            String description, String persona) {
         return new DebateParticipant(
                 null,
                 sourceCharacterId,
@@ -43,8 +41,7 @@ public class DebateParticipant {
                 model,
                 name,
                 description,
-                personality,
-                speechStyle
+                persona
         );
     }
 
@@ -69,6 +66,12 @@ public class DebateParticipant {
     private static void validateName(String name) {
         if (name == null || name.isBlank()) {
             throw new IllegalArgumentException("name is required");
+        }
+    }
+
+    private static void validatePersona(String persona) {
+        if (persona == null || persona.isBlank()) {
+            throw new IllegalArgumentException("persona is required");
         }
     }
 }

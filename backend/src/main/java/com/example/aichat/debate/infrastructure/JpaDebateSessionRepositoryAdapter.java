@@ -72,8 +72,7 @@ public class JpaDebateSessionRepositoryAdapter implements DebateSessionRepositor
                 participant.getModel(),
                 participant.getName(),
                 participant.getDescription(),
-                participant.getPersonality(),
-                participant.getSpeechStyle()
+                participant.getPersona()
         );
     }
 
@@ -141,8 +140,7 @@ public class JpaDebateSessionRepositoryAdapter implements DebateSessionRepositor
                 entity.model(),
                 entity.name(),
                 entity.description(),
-                entity.personality(),
-                entity.speechStyle()
+                entity.persona()
         );
     }
 

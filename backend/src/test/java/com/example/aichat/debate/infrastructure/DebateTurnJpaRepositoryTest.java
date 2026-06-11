@@ -9,6 +9,7 @@ import com.example.aichat.debate.domain.DebateTurnRepository;
 import com.example.aichat.debate.domain.ParticipantModel;
 import com.example.aichat.debate.domain.TurnStatus;
 import com.example.aichat.debate.domain.TurnType;
+import com.example.aichat.support.PersonaFixtures;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -134,8 +135,7 @@ class DebateTurnJpaRepositoryTest {
                                 ParticipantModel.MOCK,
                                 "첫 번째 캐릭터",
                                 "논리적인 캐릭터",
-                                "{\"rationality\":90}",
-                                "{\"tone\":\"차분함\"}"
+                                PersonaFixtures.rationalGourmetJson()
                         ),
                         DebateParticipant.create(
                                 20L,
@@ -143,8 +143,7 @@ class DebateTurnJpaRepositoryTest {
                                 ParticipantModel.FAST,
                                 "두 번째 캐릭터",
                                 "도전적인 캐릭터",
-                                "{\"aggressiveness\":70}",
-                                "{\"tone\":\"도전적\"}"
+                                PersonaFixtures.empatheticJson()
                         )
                 ),
                 FIXED_TIME

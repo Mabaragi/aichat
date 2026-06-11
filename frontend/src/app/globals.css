@@ -858,6 +858,334 @@ select:focus {
   border-top: 1px solid var(--line);
 }
 
+.persona-builder {
+  gap: 1rem;
+}
+
+.persona-builder-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 0.38fr);
+  gap: 1rem;
+  align-items: start;
+}
+
+.persona-flow {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.persona-step {
+  display: grid;
+  grid-template-columns: 2.2rem minmax(0, 1fr);
+  gap: 0.75rem;
+  padding: 0.9rem;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: var(--white);
+}
+
+.step-marker {
+  display: grid;
+  place-items: center;
+  width: 2.1rem;
+  height: 2.1rem;
+  border-radius: 50%;
+  background: var(--brand);
+  color: var(--white);
+  font-size: 0.82rem;
+  font-weight: 950;
+}
+
+.persona-step-body {
+  min-width: 0;
+}
+
+.persona-step h4,
+.persona-preview h4 {
+  margin: 0 0 0.75rem;
+  color: var(--ink);
+  font-size: 1rem;
+  font-weight: 950;
+  letter-spacing: -0.04em;
+}
+
+.persona-basic-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.persona-card-group {
+  display: grid;
+  gap: 0.5rem;
+  margin: 0 0 0.9rem;
+  padding: 0;
+  border: 0;
+}
+
+.persona-card-group:last-child {
+  margin-bottom: 0;
+}
+
+.persona-card-group legend {
+  color: var(--brand);
+  font-size: 0.72rem;
+  font-weight: 950;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.persona-card-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.55rem;
+}
+
+.persona-choice-card {
+  position: relative;
+  display: grid;
+  gap: 0.22rem;
+  min-height: 4.4rem;
+  padding: 0.75rem;
+  border: 1px solid var(--line);
+  border-radius: 15px;
+  background: var(--surface);
+  color: var(--ink);
+  cursor: pointer;
+  letter-spacing: 0;
+  transition: border-color 150ms ease, transform 150ms ease, background 150ms ease;
+}
+
+.persona-choice-card:hover {
+  transform: translateY(-2px);
+}
+
+.persona-choice-card input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  min-height: 0;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.persona-choice-card:has(input:focus-visible) {
+  outline: 3px solid rgb(111 44 219 / 28%);
+  outline-offset: 2px;
+}
+
+.persona-choice-card:has(input:checked) {
+  border-color: var(--brand);
+  background: rgb(111 44 219 / 10%);
+}
+
+.persona-choice-card span {
+  font-size: 0.86rem;
+  font-weight: 950;
+}
+
+.persona-choice-card small {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 850;
+}
+
+.persona-slider-grid {
+  display: grid;
+  gap: 0.7rem;
+}
+
+.persona-slider {
+  display: grid;
+  gap: 0.45rem;
+  padding: 0.75rem;
+  border: 1px solid var(--line);
+  border-radius: 15px;
+  background: var(--surface);
+  letter-spacing: 0;
+}
+
+.persona-slider > span {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.8rem;
+}
+
+.persona-slider strong {
+  color: var(--ink);
+  font-size: 0.82rem;
+}
+
+.persona-slider small {
+  color: var(--muted);
+  font-weight: 900;
+}
+
+.persona-slider input {
+  min-height: auto;
+  padding: 0;
+  accent-color: var(--brand);
+}
+
+.persona-scale small {
+  font-size: 0.68rem;
+}
+
+.persona-fieldset,
+.boundary-fieldset {
+  display: grid;
+  gap: 0.75rem;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.persona-fieldset {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.persona-fieldset legend,
+.boundary-fieldset legend {
+  grid-column: 1 / -1;
+  color: var(--brand);
+  font-size: 0.76rem;
+  font-weight: 950;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.boundary-fieldset {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.check-option {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 42px;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  background: var(--white);
+  color: var(--ink);
+  letter-spacing: 0;
+}
+
+.check-option input {
+  width: auto;
+  min-height: auto;
+  accent-color: var(--brand);
+}
+
+.persona-preview {
+  position: sticky;
+  top: 1rem;
+  display: grid;
+  gap: 0.95rem;
+  padding: 1rem;
+  overflow: hidden;
+  border-radius: 20px;
+  background:
+    radial-gradient(circle at 86% 12%, rgb(255 255 255 / 18%), transparent 4.5rem),
+    linear-gradient(145deg, var(--brand-deep), var(--brand));
+  color: var(--white);
+}
+
+.persona-preview::after {
+  position: absolute;
+  right: -2.4rem;
+  bottom: -2.8rem;
+  width: 9rem;
+  height: 9rem;
+  border-radius: 2rem;
+  background: rgb(255 255 255 / 12%);
+  content: "";
+  transform: rotate(16deg);
+}
+
+.persona-preview > * {
+  position: relative;
+  z-index: 1;
+}
+
+.persona-preview .eyebrow,
+.persona-preview h4 {
+  color: var(--white);
+}
+
+.persona-preview-list {
+  display: grid;
+  gap: 0.72rem;
+  margin: 0;
+}
+
+.persona-preview-list div {
+  display: grid;
+  gap: 0.18rem;
+  padding-bottom: 0.62rem;
+  border-bottom: 1px solid rgb(255 255 255 / 18%);
+}
+
+.persona-preview-list dt {
+  color: rgb(255 255 255 / 66%);
+  font-size: 0.68rem;
+  font-weight: 950;
+  letter-spacing: 0.12em;
+}
+
+.persona-preview-list dd {
+  margin: 0;
+  color: var(--white);
+  font-size: 0.8rem;
+  font-weight: 850;
+  line-height: 1.55;
+}
+
+.persona-sample {
+  display: grid;
+  gap: 0.35rem;
+  padding: 0.85rem;
+  border-radius: 16px;
+  background: rgb(255 255 255 / 12%);
+}
+
+.persona-sample span {
+  color: rgb(255 255 255 / 72%);
+  font-size: 0.68rem;
+  font-weight: 950;
+}
+
+.persona-sample p {
+  margin: 0 0 0.35rem;
+  color: var(--white);
+  font-size: 0.78rem;
+  font-weight: 850;
+  line-height: 1.5;
+}
+
+.persona-tune-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.persona-tune-button {
+  min-height: 2rem;
+  padding: 0.4rem 0.62rem;
+  border: 1px solid rgb(255 255 255 / 32%);
+  border-radius: 999px;
+  background: rgb(255 255 255 / 12%);
+  color: var(--white);
+  font-size: 0.72rem;
+  font-weight: 950;
+}
+
+.persona-tune-button:hover {
+  background: rgb(255 255 255 / 22%);
+}
+
 label {
   display: grid;
   gap: 0.42rem;
@@ -1156,6 +1484,15 @@ label {
   .studio-layout {
     grid-template-columns: 1fr;
   }
+
+  .persona-builder-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .persona-preview {
+    position: relative;
+    top: auto;
+  }
 }
 
 @media (max-width: 760px) {
@@ -1194,8 +1531,20 @@ label {
   .character-catalog,
   .topic-fields,
   .participant-fields,
-  .search-bar {
+  .search-bar,
+  .persona-basic-grid,
+  .persona-card-grid,
+  .boundary-fieldset {
     grid-template-columns: 1fr;
+  }
+
+  .persona-step {
+    grid-template-columns: 1fr;
+  }
+
+  .step-marker {
+    width: 1.9rem;
+    height: 1.9rem;
   }
 
   .search-bar {

@@ -37,8 +37,7 @@ public class CreateCharacterUseCase {
                 category.getId(),
                 command.name(),
                 command.description(),
-                command.personality(),
-                command.speechStyle(),
+                command.persona(),
                 command.visibility(),
                 now,
                 now

@@ -6,14 +6,13 @@ import com.example.aichat.category.domain.CategoryRepository;
 import com.example.aichat.category.domain.CategoryScope;
 import com.example.aichat.character.domain.Character;
 import com.example.aichat.character.domain.CharacterRepository;
-import com.example.aichat.character.domain.Personality;
-import com.example.aichat.character.domain.SpeechStyle;
 import com.example.aichat.common.exception.BusinessException;
 import com.example.aichat.common.exception.ErrorCode;
 import com.example.aichat.debate.domain.DebateFormat;
 import com.example.aichat.debate.domain.DebateSession;
 import com.example.aichat.debate.domain.DebateSessionRepository;
 import com.example.aichat.debate.domain.ParticipantModel;
+import com.example.aichat.support.PersonaFixtures;
 import com.example.aichat.user.domain.User;
 import com.example.aichat.user.domain.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -129,8 +128,7 @@ class CreateDebateSessionUseCaseTest {
         source.update(
                 "수정 이름",
                 "수정 설명",
-                Personality.of("{\"rationality\":10}"),
-                SpeechStyle.of("{\"tone\":\"반말\"}"),
+                PersonaFixtures.empathetic(),
                 "PUBLIC",
                 FIXED_TIME.plusHours(1)
         );
@@ -140,8 +138,8 @@ class CreateDebateSessionUseCaseTest {
                 .extracting(participant -> participant.getName())
                 .containsOnly("원본 이름");
         assertThat(saved.getParticipants())
-                .extracting(participant -> participant.getPersonality())
-                .containsOnly("{\"rationality\":90}");
+                .extracting(participant -> participant.getPersona())
+                .containsOnly(PersonaFixtures.rationalGourmetJson());
     }
 
     private static CreateDebateSessionCommand command(CreateDebateParticipantCommand first,
@@ -164,8 +162,7 @@ class CreateDebateSessionUseCaseTest {
                 ownerId,
                 name,
                 "논리적인 캐릭터",
-                Personality.of("{\"rationality\":90}"),
-                SpeechStyle.of("{\"tone\":\"차분함\"}"),
+                PersonaFixtures.rationalGourmet(),
                 visibility,
                 FIXED_TIME,
                 FIXED_TIME

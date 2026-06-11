@@ -9,7 +9,7 @@ Date: 2026-06-10
 ## Decision
 
 - `CreateDebateSessionUseCase`가 `UserRepository`, `CharacterRepository`, `DebateSessionRepository`를 조율한다.
-- 참가자는 세션 생성 시 `Character`의 `id`, `name`, `description`, `personality`, `speechStyle`을 `DebateParticipant`로 복사한다.
+- 참가자는 세션 생성 시 `Character`의 `id`, `name`, `description`, `persona`를 `DebateParticipant`로 복사한다.
 - `sourceCharacterId`는 원본 추적용 값이며 `debate.domain`은 `Character` 타입을 import하지 않는다.
 - 세션 소유자가 소유한 캐릭터 또는 `PUBLIC` 캐릭터만 선택할 수 있다.
 - 같은 캐릭터를 두 위치에 선택하는 것은 허용하며 `position`과 `ParticipantModel`로 구분한다.

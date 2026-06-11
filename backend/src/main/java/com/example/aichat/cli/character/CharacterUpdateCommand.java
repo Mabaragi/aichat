@@ -33,11 +33,8 @@ public class CharacterUpdateCommand implements Runnable {
     @Option(names = "--description", description = "Character description.")
     private String description;
 
-    @Option(names = "--personality", description = "Raw JSON personality payload.")
-    private String personality;
-
-    @Option(names = "--speech-style", description = "Raw JSON speech style payload.")
-    private String speechStyle;
+    @Option(names = "--persona", description = "Structured persona JSON payload.")
+    private String persona;
 
     @Option(names = "--visibility", description = "Visibility such as PRIVATE or PUBLIC.")
     private String visibility;
@@ -54,8 +51,7 @@ public class CharacterUpdateCommand implements Runnable {
                 characterId,
                 name,
                 description,
-                CharacterCommandSupport.toPersonality(objectMapper, personality),
-                CharacterCommandSupport.toSpeechStyle(objectMapper, speechStyle),
+                CharacterCommandSupport.toPersona(objectMapper, persona),
                 visibility
         );
 

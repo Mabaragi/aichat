@@ -1,5 +1,6 @@
 package com.example.aichat.debate.domain;
 
+import com.example.aichat.support.PersonaFixtures;
 import org.junit.jupiter.api.Test;
 
 import java.time.LocalDateTime;
@@ -156,8 +157,7 @@ class DebateSessionTest {
                 model,
                 "캐릭터 " + position,
                 "설명",
-                "{\"rationality\":90}",
-                "{\"tone\":\"차분함\"}"
+                PersonaFixtures.rationalGourmetJson()
         );
     }
 

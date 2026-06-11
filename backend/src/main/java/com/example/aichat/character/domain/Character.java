@@ -15,25 +15,24 @@ public class Character {
     private Long categoryId;
     private String name;
     private String description;
-    private Personality personality;
-    private SpeechStyle speechStyle;
+    private Persona persona;
     private String visibility;
     private final LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
     public Character(Long id, Long ownerId, String name, String description,
-                     Personality personality, SpeechStyle speechStyle, String visibility,
+                     Persona persona, String visibility,
                      LocalDateTime createdAt, LocalDateTime updatedAt) {
-        this(id, ownerId, null, name, description, personality, speechStyle,
-                visibility, createdAt, updatedAt);
+        this(id, ownerId, null, name, description, persona, visibility, createdAt, updatedAt);
     }
 
     public Character(Long id, Long ownerId, Long categoryId, String name, String description,
-                     Personality personality, SpeechStyle speechStyle, String visibility,
+                     Persona persona, String visibility,
                      LocalDateTime createdAt, LocalDateTime updatedAt) {
         validateOwnerId(ownerId);
         validateName(name);
         validateDescription(description);
+        validatePersona(persona);
         validateTimestamp("createdAt", createdAt);
         validateTimestamp("updatedAt", updatedAt);
 
@@ -42,67 +41,59 @@ public class Character {
         this.categoryId = categoryId;
         this.name = name;
         this.description = description;
-        this.personality = personality;
-        this.speechStyle = speechStyle;
+        this.persona = persona;
         this.visibility = normalizeVisibility(visibility);
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
     }
 
     public static Character create(Long ownerId, String name,
-                                   String description, Personality personality,
-                                   SpeechStyle speechStyle, LocalDateTime createdAt,
+                                   String description, Persona persona, LocalDateTime createdAt,
                                    LocalDateTime updatedAt) {
-        return create(ownerId, null, name, description, personality, speechStyle,
+        return create(ownerId, null, name, description, persona, createdAt, updatedAt);
+    }
+
+    public static Character create(Long ownerId, Long categoryId, String name,
+                                   String description, Persona persona, LocalDateTime createdAt,
+                                   LocalDateTime updatedAt) {
+        return create(ownerId, categoryId, name, description, persona, DEFAULT_VISIBILITY,
                 createdAt, updatedAt);
     }
 
-    public static Character create(Long ownerId, Long categoryId, String name,
-                                   String description, Personality personality,
-                                   SpeechStyle speechStyle, LocalDateTime createdAt,
-                                   LocalDateTime updatedAt) {
-        return create(ownerId, categoryId, name, description, personality, speechStyle,
-                DEFAULT_VISIBILITY, createdAt, updatedAt);
-    }
-
     public static Character create(Long ownerId, String name,
-                                   String description, Personality personality,
-                                   SpeechStyle speechStyle, String visibility,
+                                   String description, Persona persona, String visibility,
                                    LocalDateTime createdAt,
                                    LocalDateTime updatedAt) {
-        return create(ownerId, null, name, description, personality, speechStyle,
-                visibility, createdAt, updatedAt);
+        return create(ownerId, null, name, description, persona, visibility, createdAt, updatedAt);
     }
 
     public static Character create(Long ownerId, Long categoryId, String name,
-                                   String description, Personality personality,
-                                   SpeechStyle speechStyle, String visibility,
+                                   String description, Persona persona, String visibility,
                                    LocalDateTime createdAt,
                                    LocalDateTime updatedAt) {
-        return new Character(null, ownerId, categoryId, name, description, personality,
-                speechStyle, visibility, createdAt, updatedAt);
+        return new Character(null, ownerId, categoryId, name, description, persona, visibility,
+                createdAt, updatedAt);
     }
 
-    public void update(Long categoryId, String name, String description, Personality personality,
-                       SpeechStyle speechStyle, String visibility,
+    public void update(Long categoryId, String name, String description, Persona persona,
+                       String visibility,
                        LocalDateTime updatedAt) {
         validateName(name);
         validateDescription(description);
+        validatePersona(persona);
         validateTimestamp("updatedAt", updatedAt);
 
         this.categoryId = categoryId;
         this.name = name;
         this.description = description;
-        this.personality = personality;
-        this.speechStyle = speechStyle;
+        this.persona = persona;
         this.visibility = normalizeVisibility(visibility);
         this.updatedAt = updatedAt;
     }
 
-    public void update(String name, String description, Personality personality,
-                       SpeechStyle speechStyle, String visibility,
+    public void update(String name, String description, Persona persona, String visibility,
                        LocalDateTime updatedAt) {
-        update(categoryId, name, description, personality, speechStyle, visibility, updatedAt);
+        update(categoryId, name, description, persona, visibility, updatedAt);
     }
 
     private static void validateOwnerId(Long ownerId) {
@@ -124,6 +115,12 @@ public class Character {
     private static void validateDescription(String description) {
         if (description != null && description.length() > 1000) {
             throw new IllegalArgumentException("description too long");
+        }
+    }
+
+    private static void validatePersona(Persona persona) {
+        if (persona == null) {
+            throw new IllegalArgumentException("persona is required");
         }
     }
 

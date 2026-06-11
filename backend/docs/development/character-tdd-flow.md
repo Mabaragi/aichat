@@ -32,13 +32,13 @@ Java 코드를 먼저 넓게 작성하지 않는다. 각 단계는 실패하는 
 - `name`이 없거나 비어 있으면 생성할 수 없다.
 - `name`은 1자 이상 50자 이하여야 한다.
 - `description`은 없을 수 있지만, 값이 있으면 1000자 이하여야 한다.
-- `personality`와 `speechStyle`은 MVP에서 JSON 문자열로 보관된다.
+- `persona`는 필수 구조화 JSON 값 객체이며 토론 중 모델이 따를 의사결정 규칙을 담는다.
 - 생성 시 `visibility` 기본값은 `PRIVATE`다.
 - 생성 시 `createdAt`, `updatedAt`이 기록되고, 수정 시 `updatedAt`만 새 값으로 바뀐다.
 
 최소 구현:
 
-- `Character`는 `id`, `ownerId`, `name`, `description`, `personality`, `speechStyle`, `visibility`, `createdAt`, `updatedAt`을 가진다.
+- `Character`는 `id`, `ownerId`, `categoryId`, `name`, `description`, `persona`, `visibility`, `createdAt`, `updatedAt`을 가진다.
 - 생성 진입점은 필수값과 길이 규칙을 한 번 검증한다.
 - 수정 진입점은 부분 수정 입력을 반영하되, `name`과 `description` 규칙을 다시 검증한다.
 - 시간은 도메인 내부에서 `LocalDateTime.now()`로 만들지 않고, application 계층에서 받은 값을 사용한다.
@@ -94,14 +94,15 @@ void delete(Character character);
 
 - 저장한 캐릭터를 ID로 다시 조회할 수 있다.
 - 같은 `ownerId`의 캐릭터 목록만 조회된다.
-- `personality`, `speechStyle` JSON 문자열이 변형 없이 저장되고 조회된다.
+- `persona` JSON 문자열이 구조를 유지한 채 저장되고 조회된다.
 - `createdAt`, `updatedAt`, `visibility`가 `characters` 테이블 매핑으로 유지된다.
 - 삭제한 캐릭터는 다시 조회되지 않는다.
 
 최소 구현:
 
 - JPA 전용 entity는 `characters` 테이블 초안과 맞춘다.
-- 컬럼명은 명세의 SQL 초안을 따른다: `owner_id`, `name`, `description`, `personality`, `speech_style`, `visibility`, `created_at`, `updated_at`.
+- 컬럼명은 명세의 SQL 초안을 따른다: `owner_id`, `category_id`, `name`, `description`, `persona`, `visibility`, `created_at`, `updated_at`.
+- `personality`, `speech_style` legacy 컬럼은 후속 cleanup 전까지 호환용으로 남아 있을 수 있지만 Java/API 구현에서는 사용하지 않는다.
 - Spring Data repository와 domain `CharacterRepository` 구현 adapter를 infrastructure 안에 둔다.
 - entity와 domain 사이 변환은 infrastructure 내부 mapper 또는 adapter 메서드에서 처리한다.
 
@@ -168,12 +169,12 @@ void delete(Character character);
 - `CharacterResponse`는 명세의 응답 모양을 따른다.
 - `visibility`가 요청에 없으면 MVP 기본값 `PRIVATE`가 적용되도록 한다.
 
-JSON 필드 정책:
+Persona 필드 정책:
 
-- MVP 내부 저장 타입은 JSON 문자열이다.
-- HTTP 요청의 `personality`, `speechStyle`은 명세 예시처럼 JSON object로 받을 수 있다.
-- web 또는 application 진입 DTO에서 JSON 값을 문자열로 직렬화한 뒤 domain에는 문자열로 전달한다.
-- 문자열로 이미 들어온 값까지 지원할지는 별도 요구가 생기기 전까지 확장하지 않는다.
+- MVP 내부 저장 타입은 JSON 문자열을 감싼 `Persona` 값 객체다.
+- HTTP 요청의 `persona`는 명세 예시처럼 구조화 JSON object로 받는다.
+- web 또는 application 진입 DTO에서 JSON 값을 문자열로 직렬화한 뒤 domain `Persona`에서 shape를 다시 검증한다.
+- `personality`, `speechStyle` 요청/응답은 지원하지 않는다.
 
 리팩터링 기준:
 

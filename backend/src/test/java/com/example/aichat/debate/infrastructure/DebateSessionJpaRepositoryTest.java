@@ -6,6 +6,7 @@ import com.example.aichat.debate.domain.DebateSession;
 import com.example.aichat.debate.domain.DebateSessionRepository;
 import com.example.aichat.debate.domain.DebateSessionStatus;
 import com.example.aichat.debate.domain.ParticipantModel;
+import com.example.aichat.support.PersonaFixtures;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -73,8 +74,8 @@ class DebateSessionJpaRepositoryTest {
                 .extracting(DebateParticipant::getName)
                 .containsExactly("첫 번째 캐릭터", "두 번째 캐릭터");
         assertThat(found.getParticipants())
-                .extracting(DebateParticipant::getPersonality)
-                .containsExactly("{\"rationality\":90}", null);
+                .extracting(DebateParticipant::getPersona)
+                .containsExactly(PersonaFixtures.rationalGourmetJson(), PersonaFixtures.empatheticJson());
     }
 
     @Test
@@ -175,8 +176,7 @@ class DebateSessionJpaRepositoryTest {
                         ParticipantModel.FAST,
                         "첫 번째 캐릭터",
                         "논리적인 캐릭터",
-                        "{\"rationality\":90}",
-                        "{\"tone\":\"차분함\"}"
+                        PersonaFixtures.rationalGourmetJson()
                 ),
                 DebateParticipant.create(
                         20L,
@@ -184,8 +184,7 @@ class DebateSessionJpaRepositoryTest {
                         ParticipantModel.QUALITY,
                         "두 번째 캐릭터",
                         null,
-                        null,
-                        null
+                        PersonaFixtures.empatheticJson()
                 )
         );
     }

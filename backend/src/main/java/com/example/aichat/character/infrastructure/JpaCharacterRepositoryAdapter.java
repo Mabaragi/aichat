@@ -2,8 +2,7 @@ package com.example.aichat.character.infrastructure;
 
 import com.example.aichat.character.domain.Character;
 import com.example.aichat.character.domain.CharacterRepository;
-import com.example.aichat.character.domain.Personality;
-import com.example.aichat.character.domain.SpeechStyle;
+import com.example.aichat.character.domain.Persona;
 import com.example.aichat.common.application.PagedResult;
 import org.springframework.context.annotation.Profile;
 import org.springframework.data.domain.PageRequest;
@@ -73,8 +72,7 @@ public class JpaCharacterRepositoryAdapter implements CharacterRepository {
                 character.getCategoryId(),
                 character.getName(),
                 character.getDescription(),
-                unwrap(character.getPersonality()),
-                unwrap(character.getSpeechStyle()),
+                unwrap(character.getPersona()),
                 character.getVisibility(),
                 character.getCreatedAt(),
                 character.getUpdatedAt()
@@ -88,28 +86,19 @@ public class JpaCharacterRepositoryAdapter implements CharacterRepository {
                 entity.categoryId(),
                 entity.name(),
                 entity.description(),
-                wrapPersonality(entity.personality()),
-                wrapSpeechStyle(entity.speechStyle()),
+                wrapPersona(entity.persona()),
                 entity.visibility(),
                 entity.createdAt(),
                 entity.updatedAt()
         );
     }
 
-    private static String unwrap(Personality personality) {
-        return personality == null ? null : personality.value();
+    private static String unwrap(Persona persona) {
+        return persona == null ? null : persona.value();
     }
 
-    private static String unwrap(SpeechStyle speechStyle) {
-        return speechStyle == null ? null : speechStyle.value();
-    }
-
-    private static Personality wrapPersonality(String personality) {
-        return personality == null ? null : Personality.of(personality);
-    }
-
-    private static SpeechStyle wrapSpeechStyle(String speechStyle) {
-        return speechStyle == null ? null : SpeechStyle.of(speechStyle);
+    private static Persona wrapPersona(String persona) {
+        return persona == null ? null : Persona.of(persona);
     }
 
     private static String normalizeQuery(String query) {

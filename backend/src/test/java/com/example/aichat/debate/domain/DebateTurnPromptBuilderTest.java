@@ -1,5 +1,6 @@
 package com.example.aichat.debate.domain;
 
+import com.example.aichat.support.PersonaFixtures;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -30,15 +31,23 @@ class DebateTurnPromptBuilderTest {
                 .contains("[캐릭터]")
                 .contains("이름: 합리주의 미식가")
                 .contains("설명: 논리적인 캐릭터")
-                .contains("성격: {\"rationality\":90}")
-                .contains("말투: {\"tone\":\"차분함\"}")
-                .contains("최대 600자 이내로 작성하세요.");
+                .contains("[페르소나 규칙]")
+                .contains("정체성: 합리주의 미식가")
+                .contains("핵심 가치: 실증성, 논리")
+                .contains("반드시 할 것: 상대 주장을 먼저 요약한다., 불확실한 사실은 단정하지 않는다.")
+                .contains("하지 말 것: 인신공격하지 않는다., 출처 없는 수치를 만들지 않는다.")
+                .contains("페르소나보다 사실성, 안전, 토론 규칙을 우선하세요.")
+                .contains("최대 600자 이내로 작성하세요.")
+                .contains("[출력 형식]")
+                .contains("[요약]")
+                .contains("[입장 상태]");
     }
 
     @Test
     void renderUnsetOptionalCharacterFields() {
         DebateParticipant participant = new DebateParticipant(
-                null, 1L, 0, ParticipantModel.MOCK, "캐릭터", null, null, null
+                null, 1L, 0, ParticipantModel.MOCK, "캐릭터", null,
+                PersonaFixtures.rationalGourmetJson()
         );
 
         String prompt = promptBuilder.buildDebateTurnPrompt(
@@ -52,8 +61,7 @@ class DebateTurnPromptBuilderTest {
 
         assertThat(prompt)
                 .contains("설명: 미설정")
-                .contains("성격: 미설정")
-                .contains("말투: 미설정");
+                .contains("정체성: 합리주의 미식가");
     }
 
     @Test
@@ -78,8 +86,7 @@ class DebateTurnPromptBuilderTest {
                 ParticipantModel.FAST,
                 "합리주의 미식가",
                 "논리적인 캐릭터",
-                "{\"rationality\":90}",
-                "{\"tone\":\"차분함\"}"
+                PersonaFixtures.rationalGourmetJson()
         );
     }
 }
